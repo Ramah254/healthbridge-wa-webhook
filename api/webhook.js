@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 export default async function handler(req, res) {
-  const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN;
+  const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
   const APP_SECRET = process.env.META_APP_SECRET;
   const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
 
