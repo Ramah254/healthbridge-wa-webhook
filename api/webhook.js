@@ -34,7 +34,9 @@ function safeEqual(a, b) {
 export default async function handler(req, res) {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
   const APP_SECRET = process.env.META_APP_SECRET;
-  const MAKE_WEBHOOK_URL = process.env.MAKE_WEBHOOK_URL;
+  
+  // We no longer rely on just one webhook URL
+  // We will dynamically check process.env later
 
   if (req.method === "GET") {
     const mode = req.query["hub.mode"];
@@ -108,22 +110,41 @@ export default async function handler(req, res) {
     timestamp: message?.timestamp || status?.timestamp || null
   };
 
-  if (MAKE_WEBHOOK_URL) {
+  // Build an array of webhooks to trigger
+  const webhooks = [];
+  
+  if (process.env.MAKE_WEBHOOK_URL) {
+    webhooks.push(process.env.MAKE_WEBHOOK_URL);
+  }
+  
+  if (process.env.MCH_WEBHOOK_URL) {
+    webhooks.push(process.env.MCH_WEBHOOK_URL);
+  }
+
+  // Forward to all available webhooks concurrently
+  if (webhooks.length > 0) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
 
-      await fetch(MAKE_WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(cleanedPayload),
-        signal: controller.signal
-      });
+      await Promise.all(
+        webhooks.map((url) =>
+          fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(cleanedPayload),
+            signal: controller.signal
+          }).catch((err) => {
+            console.error(`Error forwarding to ${url}:`, err.message);
+          })
+        )
+      );
 
       clearTimeout(timeout);
-    } catch {
+    } catch (error) {
+      console.error("Webhook forwarding error:", error.message);
     }
   }
 
