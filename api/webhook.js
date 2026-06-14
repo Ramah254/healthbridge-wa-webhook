@@ -150,9 +150,11 @@ export default async function handler(req, res) {
         error_title: status?.errors?.[0]?.title || null
       };
 
-      if (process.env.MAKE_STATUS_WEBHOOK_URL) {
-        await forwardToWebhook(process.env.MAKE_STATUS_WEBHOOK_URL, statusPayload);
-      }
+      const statusTargets = [
+  process.env.MCH_STATUS_WEBHOOK_URL,
+  process.env.OPD_STATUS_WEBHOOK_URL
+].filter(Boolean);
+await Promise.all(statusTargets.map(url => forwardToWebhook(url, statusPayload)));
     }
   }
 
