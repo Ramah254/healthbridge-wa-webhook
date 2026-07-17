@@ -6,6 +6,42 @@ export const config = {
   }
 };
 
+// ── System-aware routing tables ─────────────────────────────────────────────
+// Button texts unique to one system route to that system only.
+// Anything ambiguous, shared, or free text still goes to both.
+// All matching is case-insensitive and trimmed.
+
+const MCH_ONLY_BUTTONS = new Set([
+  // English (T1 to T8)
+  "confirmed", "ask a question", "contact clinic",
+  "i'm doing well", "have concerns",
+  "baby has arrived", "not yet",
+  "vaccines given", "not given yet",
+  "doing well",
+  "yes i will attend", "need to reschedule",
+  "i am okay", "need support",
+  // Swahili (T1 to T8)
+  "nimethibitisha", "uliza swali", "wasiliana na kliniki",
+  "niko salama", "nina wasiwasi", "nipigie simu",
+  "mtoto amezaliwa", "bado", "nahitaji msaada",
+  "amepata chanjo", "bado hajapata",
+  "naendelea vizuri",
+  "nitahudhuria", "nahitaji kuahirisha",
+  "niko sawa", "nashukuru", "nahitaji kuongea"
+]);
+
+const OPD_ONLY_BUTTONS = new Set([
+  "improving", "not improving",
+  "treatment working", "still have symptoms"
+]);
+
+// "i am fine", "need assistance", "request callback", "callback" and any
+// unrecognized button stay shared. They exist or may exist in both systems.
+
+function normalize(text) {
+  return (text || "").trim().toLowerCase();
+}
+
 function readRawBody(req) {
   return new Promise((resolve, reject) => {
     let data = "";
@@ -34,7 +70,7 @@ async function forwardToWebhook(url, payload) {
       signal: controller.signal
     });
   } catch {
-    // Silent — Meta already received 200
+    // Silent. Meta already received 200
   } finally {
     clearTimeout(timeout);
   }
@@ -96,10 +132,15 @@ export default async function handler(req, res) {
   const status = change?.statuses?.[0] || null;
 
   // ── INBOUND MESSAGE ───────────────────────────────────────────────────────
-  // Forward to BOTH MCH and OPD inbound scenarios.
-  // Each Make scenario checks if the phone number belongs to their patients
-  // and exits silently if not — no double processing.
+  // Button replies unique to one system route to that system only.
+  // Free text, opt-outs and unknown buttons go to both.
   if (message) {
+    const buttonText =
+      message?.button?.text ||
+      message?.interactive?.button_reply?.title ||
+      message?.interactive?.list_reply?.title ||
+      null;
+
     const inboundPayload = {
       object: body?.object || null,
       event_time: new Date().toISOString(),
@@ -117,13 +158,23 @@ export default async function handler(req, res) {
         message?.interactive?.button_reply?.title ||
         message?.interactive?.list_reply?.title ||
         null,
+      context_id: message?.context?.id || null,
       timestamp: message.timestamp || null
     };
 
-    const inboundTargets = [
-      process.env.MCH_WEBHOOK_URL,
-      process.env.OPD_WEBHOOK_URL
-    ].filter(Boolean);
+    const norm = normalize(buttonText);
+    let inboundTargets;
+    if (norm && MCH_ONLY_BUTTONS.has(norm)) {
+      inboundTargets = [process.env.MCH_WEBHOOK_URL];
+    } else if (norm && OPD_ONLY_BUTTONS.has(norm)) {
+      inboundTargets = [process.env.OPD_WEBHOOK_URL];
+    } else {
+      inboundTargets = [
+        process.env.MCH_WEBHOOK_URL,
+        process.env.OPD_WEBHOOK_URL
+      ];
+    }
+    inboundTargets = inboundTargets.filter(Boolean);
 
     await Promise.all(inboundTargets.map(url => forwardToWebhook(url, inboundPayload)));
   }
@@ -132,29 +183,41 @@ export default async function handler(req, res) {
   if (status) {
     const statusType = status?.status;
 
-    // "sent" and "read" dropped here — zero Make ops consumed
+    // "sent" and "read" dropped here. Zero Make ops consumed
     if (statusType === "sent" || statusType === "read") {
       return res.status(200).send("EVENT_RECEIVED");
     }
 
-    // "delivered" and "failed" go to the shared Status Handler scenario
-    // That one scenario searches MCH + OPD sheets by MetaMessageSID
+    // "delivered" and "failed" route by biz_opaque_callback_data.
+    // Make outbound sends will stamp "MCH" or "OPD" on every message.
+    // Until that lands, or if the field is absent, fall back to both.
     if (statusType === "delivered" || statusType === "failed") {
       const statusPayload = {
         event_time: new Date().toISOString(),
         status: statusType,
-        message_id: status.id || null,              // MetaMessageSID — row lookup key
+        message_id: status.id || null,              // MetaMessageSID, row lookup key
         recipient_id: status.recipient_id || null,  // patient phone number
         timestamp: status.timestamp || null,
         error_code: status?.errors?.[0]?.code || null,   // e.g. 131026 undeliverable
-        error_title: status?.errors?.[0]?.title || null
+        error_title: status?.errors?.[0]?.title || null,
+        biz_data: status?.biz_opaque_callback_data || null
       };
 
-      const statusTargets = [
-  process.env.MCH_STATUS_WEBHOOK_URL,
-  process.env.OPD_STATUS_WEBHOOK_URL
-].filter(Boolean);
-await Promise.all(statusTargets.map(url => forwardToWebhook(url, statusPayload)));
+      const bizData = normalize(status?.biz_opaque_callback_data);
+      let statusTargets;
+      if (bizData === "mch") {
+        statusTargets = [process.env.MCH_STATUS_WEBHOOK_URL];
+      } else if (bizData === "opd") {
+        statusTargets = [process.env.OPD_STATUS_WEBHOOK_URL];
+      } else {
+        statusTargets = [
+          process.env.MCH_STATUS_WEBHOOK_URL,
+          process.env.OPD_STATUS_WEBHOOK_URL
+        ];
+      }
+      statusTargets = statusTargets.filter(Boolean);
+
+      await Promise.all(statusTargets.map(url => forwardToWebhook(url, statusPayload)));
     }
   }
 
