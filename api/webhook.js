@@ -27,7 +27,19 @@ const MCH_ONLY_BUTTONS = new Set([
   "amepata chanjo", "bado hajapata",
   "naendelea vizuri",
   "nitahudhuria", "nahitaji kuahirisha",
-  "niko sawa", "nashukuru", "nahitaji kuongea"
+  "niko sawa", "nashukuru", "nahitaji kuongea",
+  
+  // New additions from PART D
+  "rebook my visit",
+  "already attended",
+  "delivery plan confirmed",
+  "need help planning",
+  "ndiyo nitahudhuria",
+  "nahitaji kubadilisha",
+  "nipigiwe simu",
+  "panga ziara upya",
+  "nilishahudhuria",
+  "mpango umethibitishwa"
 ]);
 
 const OPD_ONLY_BUTTONS = new Set([
