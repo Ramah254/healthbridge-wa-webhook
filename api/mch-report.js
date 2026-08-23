@@ -128,6 +128,15 @@ Rules:
 - Plain professional English. No marketing language, no exclamation marks, no em dashes.
 - If a number moved the wrong way, say so plainly. Do not spin it.
 - If the month was flat or the caseload is tiny, say that rather than manufacturing a story.
+- HEADLINE and CHANGED_TITLE are spoken sentences, not headers. Sentence case only (capitalise
+  only the first word and proper nouns). Never title-case them, never format them as a label
+  followed by a colon, and never restate the month/facility/report name in them.
+  Bad:  "July 2026 MCH Follow-Up Report: No Messaging Activity on a Caseload of 13 Active Mothers"
+  Bad:  "Key Changes from June to July 2026"
+  Good: "No messages went out in July despite a growing caseload."
+  Good: "Enrollment stopped and escalations spiked with no messages sent to explain them."
+  Say the single most important thing that happened, the way you'd say it out loud to the
+  director, not the way you'd title a slide.
 - CHANGED_BODY must be 2 to 3 <p> paragraphs of raw HTML, no other tags.
 - Every *_MEAN is one or two sentences, max 22 words, no HTML.
 - Each ACTION_*_BODY is 2 to 4 sentences and must reference a specific number from the data.
