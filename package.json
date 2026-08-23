@@ -1,0 +1,8 @@
+{
+  "name": "healthbridge-wa-webhook",
+  "version": "1.0.0",
+  "dependencies": {
+    "@sparticuz/chromium": "^131.0.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}
