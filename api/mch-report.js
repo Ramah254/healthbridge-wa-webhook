@@ -18,12 +18,18 @@
  * Env vars required:
  *   MCH_REPORT_SECRET   shared secret, must match what Make sends
  *   ANTHROPIC_API_KEY   used to draft the narrative sections
+ *
+ * Vercel project settings required:
+ *   Node.js Version = 22.x or later (Settings -> General -> Node.js Version).
+ *   @sparticuz/chromium >= 147 requires it; older Node runtimes are built on
+ *   an Amazon Linux image that is missing shared libraries (libnss3.so etc.)
+ *   the current Chromium binary needs -- that mismatch is what "Failed to
+ *   launch the browser process" / "libnss3.so: cannot open shared object
+ *   file" means if you see it again after a @sparticuz/chromium upgrade.
  */
 
 const fs = require("fs");
 const path = require("path");
-const chromium = require("@sparticuz/chromium");
-const puppeteer = require("puppeteer-core");
 
 // ---------------------------------------------------------------- helpers
 
@@ -190,11 +196,22 @@ function fillTemplate(tokens) {
   return html;
 }
 
+/**
+ * Chromium and puppeteer-core are loaded lazily, inside this function, not at
+ * module load time. @sparticuz/chromium 147+ ships ESM-only, so a top-level
+ * require() would crash the function on cold start even for requests that
+ * never render a PDF (e.g. a bad secret). Dynamic import() works from a
+ * CommonJS file and defers the cost to the one code path that needs it.
+ */
 async function toPdf(html) {
+  const { default: chromium } = await import("@sparticuz/chromium");
+  const { default: puppeteer } = await import("puppeteer-core");
+
   const browser = await puppeteer.launch({
     args: chromium.args,
+    defaultViewport: chromium.defaultViewport,
     executablePath: await chromium.executablePath(),
-    headless: true,
+    headless: chromium.headless,
   });
   try {
     const page = await browser.newPage();
