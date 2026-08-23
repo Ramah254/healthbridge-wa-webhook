@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MCH Monthly Impact Report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 15mm 18mm 15mm;
+    @bottom-left {
+      content: "HealthBridge Solutions  ·  MCH Monthly Impact Report  ·  {{REPORT_MONTH}}";
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+      padding-top: 4mm;
+    }
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+      padding-top: 4mm;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
+    font-size: 9.2pt;
+    line-height: 1.5;
+    color: #1E293B;
+    margin: 0;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    border-bottom: 2.5pt solid #0F172A;
+    padding-bottom: 2.5mm;
+    margin-bottom: 5mm;
+  }
+  .brand-row { display: flex; align-items: baseline; }
+  .brand-mark {
+    font-size: 13.5pt; font-weight: bold; color: #1A56DB;
+    letter-spacing: -0.4pt; white-space: nowrap;
+  }
+  .brand-sub {
+    margin-left: auto; font-size: 8pt; color: #64748B;
+    text-transform: uppercase; letter-spacing: 1.2pt;
+  }
+
+  h1.report-title {
+    font-size: 21pt;
+    font-weight: bold;
+    color: #0F172A;
+    letter-spacing: -0.7pt;
+    line-height: 1.15;
+    margin: 4mm 0 3mm 0;
+  }
+
+  /* ---------- meta strip ---------- */
+  table.meta { width: 100%; border-collapse: collapse; margin-bottom: 5mm; }
+  table.meta td {
+    border-top: 0.6pt solid #E2E8F0;
+    border-bottom: 0.6pt solid #E2E8F0;
+    padding: 2.5mm 0;
+    vertical-align: top;
+    width: 33.33%;
+  }
+  .meta-label {
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 1pt;
+    color: #94A3B8; display: block; margin-bottom: 1mm;
+  }
+  .meta-value { font-size: 10pt; color: #0F172A; font-weight: bold; }
+
+  /* ---------- one sentence ---------- */
+  .headline {
+    background: #EFF4FE;
+    border-left: 3pt solid #1A56DB;
+    padding: 4mm 4.5mm;
+    margin-bottom: 5mm;
+  }
+  .headline .kicker {
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 1.2pt;
+    color: #1A56DB; font-weight: bold; display: block; margin-bottom: 2mm;
+  }
+  .headline p { margin: 0; font-size: 10pt; line-height: 1.45; color: #0F172A; }
+
+  /* ---------- KPI cards ---------- */
+  .kpi-row { display: flex; margin: 0 -1.6mm 5mm -1.6mm; }
+  .kpi {
+    flex: 1; margin: 0 1.6mm;
+    border: 0.7pt solid #DCE6F8;
+    border-top: 2.2pt solid #1A56DB;
+    padding: 3mm 2.6mm 2.6mm 2.6mm;
+  }
+  .kpi .kpi-label {
+    font-size: 6.8pt; text-transform: uppercase; letter-spacing: 0.8pt;
+    color: #64748B; line-height: 1.3; min-height: 7mm; display: block;
+  }
+  .kpi .kpi-value {
+    font-size: 19pt; font-weight: bold; color: #0F172A;
+    letter-spacing: -0.8pt; line-height: 1; margin: 1mm 0 1.2mm 0;
+  }
+  .kpi .kpi-delta { font-size: 7.5pt; font-weight: bold; }
+  .kpi .kpi-prev { font-size: 6.8pt; color: #94A3B8; display: block; margin-top: 0.8mm; }
+  .up   { color: #15803D; }
+  .down { color: #B91C1C; }
+  .flat { color: #64748B; }
+
+  /* ---------- sections ---------- */
+  h2 {
+    font-size: 13pt; color: #0F172A; font-weight: bold;
+    letter-spacing: -0.3pt;
+    margin: 0 0 1.5mm 0;
+  }
+  .section-kicker {
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 1.2pt;
+    color: #1A56DB; font-weight: bold; display: block; margin-bottom: 1.5mm;
+  }
+  .section { margin-bottom: 5mm; }
+  .section p { margin: 0 0 2.5mm 0; }
+  .section p:last-child { margin-bottom: 0; }
+
+  /* ---------- metric table ---------- */
+  table.metrics { width: 100%; border-collapse: collapse; margin-top: 1.5mm; }
+  table.metrics thead th {
+    background: #0F172A; color: #FFFFFF;
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 0.7pt;
+    padding: 2mm 2.2mm; text-align: left; font-weight: bold;
+  }
+  table.metrics thead th.num { text-align: right; }
+  table.metrics tbody tr { page-break-inside: avoid; }
+  table.metrics tbody td {
+    padding: 1.1mm 2.1mm;
+    border-bottom: 0.5pt solid #E8EEF7;
+    vertical-align: top;
+    font-size: 7.9pt;
+  }
+  table.metrics tbody tr:nth-child(even) td { background: #F8FAFD; }
+  table.metrics td.num { text-align: right; font-weight: bold; color: #0F172A; white-space: nowrap; }
+  table.metrics td.chg { text-align: right; font-weight: bold; white-space: nowrap; }
+  .m-name { font-weight: bold; color: #0F172A; display: block; }
+  .m-desc { font-size: 6.7pt; color: #64748B; display: block; line-height: 1.3; margin-top: 0.3mm; }
+  .m-mean { font-size: 7.1pt; color: #475569; line-height: 1.32; }
+  tr.group-head td {
+    background: #EFF4FE !important;
+    font-size: 6.8pt; text-transform: uppercase; letter-spacing: 1pt;
+    color: #1A56DB; font-weight: bold; padding: 1.4mm 2.2mm;
+    border-bottom: 0.7pt solid #DCE6F8;
+  }
+
+  /* ---------- revenue callout ---------- */
+  .revenue {
+    border: 0.7pt solid #DCE6F8;
+    border-left: 3pt solid #C2410C;
+    padding: 4mm 4.5mm;
+    margin-top: 4mm;
+    background: #FEFCFA;
+  }
+  .revenue .kicker {
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 1.2pt;
+    color: #C2410C; font-weight: bold; display: block; margin-bottom: 2mm;
+  }
+  .revenue .rev-value {
+    font-size: 18pt; font-weight: bold; color: #0F172A;
+    letter-spacing: -0.6pt; line-height: 1;
+  }
+  .revenue .rev-note {
+    font-size: 7.8pt; color: #475569; margin-top: 2.5mm; line-height: 1.45;
+  }
+
+  /* ---------- safety ---------- */
+  .safety-row { display: flex; margin: 2.5mm -1.6mm 0 -1.6mm; }
+  .safety {
+    flex: 1; margin: 0 1.6mm;
+    background: #F8FAFD; border: 0.7pt solid #E2E8F0;
+    padding: 3.5mm 3mm;
+  }
+  .safety .s-value { font-size: 16pt; font-weight: bold; color: #0F172A; line-height: 1; }
+  .safety .s-label {
+    font-size: 7pt; color: #64748B; display: block; margin-top: 1.5mm; line-height: 1.35;
+  }
+
+  /* ---------- actions ---------- */
+  .action { margin-bottom: 5mm; }
+  .action-head { display: flex; align-items: baseline; margin-bottom: 1.5mm; }
+  .action-num {
+    font-size: 15pt; font-weight: bold; color: #DCE6F8;
+    width: 9mm; flex-shrink: 0; line-height: 1;
+  }
+  .action-title { font-size: 10.5pt; font-weight: bold; color: #0F172A; line-height: 1.3; }
+  .action-body { margin-left: 9mm; font-size: 8.8pt; color: #334155; line-height: 1.5; }
+
+  /* ---------- signoff ---------- */
+  .signoff {
+    border-top: 0.7pt solid #E2E8F0;
+    margin-top: 5mm; padding-top: 4mm;
+  }
+  .signoff p { font-size: 9pt; color: #334155; margin: 0 0 4mm 0; line-height: 1.55; }
+  .sig-name { font-size: 9.5pt; font-weight: bold; color: #0F172A; }
+  .sig-role { font-size: 7.8pt; color: #64748B; }
+
+  .method {
+    margin-top: 5mm; padding: 3mm 3.5mm;
+    background: #F8FAFD; border: 0.6pt solid #E8EEF7;
+    font-size: 7.2pt; color: #64748B; line-height: 1.5;
+  }
+  .method strong { color: #475569; }
+
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="masthead">
+  <div class="brand-row">
+    <span class="brand-mark">HealthBridge Solutions</span>
+    <span class="brand-sub">MCH Follow-Up Programme</span>
+  </div>
+</div>
+
+<h1 class="report-title">How your mothers moved<br>this month.</h1>
+
+<table class="meta">
+  <tr>
+    <td><span class="meta-label">Facility</span><span class="meta-value">{{FACILITY}}</span></td>
+    <td><span class="meta-label">Reporting period</span><span class="meta-value">{{REPORT_MONTH}}</span></td>
+    <td><span class="meta-label">Prepared for</span><span class="meta-value">{{PREPARED_FOR}}</span></td>
+  </tr>
+</table>
+
+<div class="headline">
+  <span class="kicker">In one sentence</span>
+  <p>{{HEADLINE}}</p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi">
+    <span class="kpi-label">Mothers under active follow-up</span>
+    <div class="kpi-value">{{ACTIVE_MOTHERS}}</div>
+    <span class="kpi-delta {{ACTIVE_MOTHERS_CLASS}}">{{ACTIVE_MOTHERS_DELTA}}</span>
+    <span class="kpi-prev">Last month: {{ACTIVE_MOTHERS_PREV}}</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-label">Response rate</span>
+    <div class="kpi-value">{{RESPONSE_RATE}}%</div>
+    <span class="kpi-delta {{RESPONSE_RATE_CLASS}}">{{RESPONSE_RATE_DELTA}}</span>
+    <span class="kpi-prev">Last month: {{RESPONSE_RATE_PREV}}%</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-label">Attendance confirmed</span>
+    <div class="kpi-value">{{ATTENDANCE_RATE}}%</div>
+    <span class="kpi-delta {{ATTENDANCE_RATE_CLASS}}">{{ATTENDANCE_RATE_DELTA}}</span>
+    <span class="kpi-prev">Last month: {{ATTENDANCE_RATE_PREV}}%</span>
+  </div>
+  <div class="kpi">
+    <span class="kpi-label">Deliveries at your facility</span>
+    <div class="kpi-value">{{FACILITY_DELIVERIES}}</div>
+    <span class="kpi-delta {{FACILITY_DELIVERIES_CLASS}}">{{FACILITY_DELIVERIES_DELTA}}</span>
+    <span class="kpi-prev">Last month: {{FACILITY_DELIVERIES_PREV}}</span>
+  </div>
+</div>
+
+<div class="section">
+  <span class="section-kicker">What changed this month</span>
+  <h2>{{CHANGED_TITLE}}</h2>
+  {{CHANGED_BODY}}
+</div>
+
+<div class="revenue">
+  <span class="kicker">Estimated revenue from followed-up patients</span>
+  <div class="rev-value">KES {{REVENUE}}</div>
+  <div class="rev-note">{{REVENUE_NOTE}}</div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page-break"></div>
+
+<div class="masthead">
+  <div class="brand-row">
+    <span class="brand-mark">HealthBridge Solutions</span>
+    <span class="brand-sub">The full picture</span>
+  </div>
+</div>
+
+<div class="section">
+  <span class="section-kicker">Every metric we track</span>
+  <h2>This month, last month, and what moved.</h2>
+
+  <table class="metrics">
+    <thead>
+      <tr>
+        <th style="width:29%">Metric</th>
+        <th class="num" style="width:10%">This<br>month</th>
+        <th class="num" style="width:10%">Last<br>month</th>
+        <th class="num" style="width:10%">Change</th>
+        <th style="width:41%">What it means</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="group-head"><td colspan="5">Reach and engagement</td></tr>
+      <tr>
+        <td><span class="m-name">Mothers under follow-up</span><span class="m-desc">Active on the programme at month end</span></td>
+        <td class="num">{{ACTIVE_MOTHERS}}</td><td class="num">{{ACTIVE_MOTHERS_PREV}}</td>
+        <td class="chg {{ACTIVE_MOTHERS_CLASS}}">{{ACTIVE_MOTHERS_DELTA}}</td>
+        <td class="m-mean">{{ACTIVE_MOTHERS_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">New mothers enrolled</span><span class="m-desc">First registered this month</span></td>
+        <td class="num">{{NEW_ENROLLMENTS}}</td><td class="num">{{NEW_ENROLLMENTS_PREV}}</td>
+        <td class="chg {{NEW_ENROLLMENTS_CLASS}}">{{NEW_ENROLLMENTS_DELTA}}</td>
+        <td class="m-mean">{{NEW_ENROLLMENTS_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Messages delivered</span><span class="m-desc">Clinical, immunisation and education</span></td>
+        <td class="num">{{MESSAGES_SENT}}</td><td class="num">{{MESSAGES_SENT_PREV}}</td>
+        <td class="chg {{MESSAGES_SENT_CLASS}}">{{MESSAGES_SENT_DELTA}}</td>
+        <td class="m-mean">{{MESSAGES_SENT_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Response rate</span><span class="m-desc">Mothers who replied to a check-in</span></td>
+        <td class="num">{{RESPONSE_RATE}}%</td><td class="num">{{RESPONSE_RATE_PREV}}%</td>
+        <td class="chg {{RESPONSE_RATE_CLASS}}">{{RESPONSE_RATE_DELTA}}</td>
+        <td class="m-mean">{{RESPONSE_RATE_MEAN}}</td>
+      </tr>
+
+      <tr class="group-head"><td colspan="5">Attendance and retention</td></tr>
+      <tr>
+        <td><span class="m-name">Visit reminders sent</span><span class="m-desc">ANC, PNC and immunisation reminders</span></td>
+        <td class="num">{{REMINDERS_SENT}}</td><td class="num">{{REMINDERS_SENT_PREV}}</td>
+        <td class="chg {{REMINDERS_SENT_CLASS}}">{{REMINDERS_SENT_DELTA}}</td>
+        <td class="m-mean">{{REMINDERS_SENT_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Attendance rate</span><span class="m-desc">Reminders that led to a confirmed visit</span></td>
+        <td class="num">{{ATTENDANCE_RATE}}%</td><td class="num">{{ATTENDANCE_RATE_PREV}}%</td>
+        <td class="chg {{ATTENDANCE_RATE_CLASS}}">{{ATTENDANCE_RATE_DELTA}}</td>
+        <td class="m-mean">{{ATTENDANCE_RATE_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">No-show rate</span><span class="m-desc">Reminders with no attendance recorded</span></td>
+        <td class="num">{{NOSHOW_RATE}}%</td><td class="num">{{NOSHOW_RATE_PREV}}%</td>
+        <td class="chg {{NOSHOW_RATE_CLASS}}">{{NOSHOW_RATE_DELTA}}</td>
+        <td class="m-mean">{{NOSHOW_RATE_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">No-shows recovered</span><span class="m-desc">Missed visits rebooked after follow-up</span></td>
+        <td class="num">{{NOSHOWS_RECOVERED}}</td><td class="num">{{NOSHOWS_RECOVERED_PREV}}</td>
+        <td class="chg {{NOSHOWS_RECOVERED_CLASS}}">{{NOSHOWS_RECOVERED_DELTA}}</td>
+        <td class="m-mean">{{NOSHOWS_RECOVERED_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Immunisation reminders</span><span class="m-desc">KEPI schedule reminders issued</span></td>
+        <td class="num">{{IMMUNIZATION_REMINDERS}}</td><td class="num">{{IMMUNIZATION_REMINDERS_PREV}}</td>
+        <td class="chg {{IMMUNIZATION_REMINDERS_CLASS}}">{{IMMUNIZATION_REMINDERS_DELTA}}</td>
+        <td class="m-mean">{{IMMUNIZATION_REMINDERS_MEAN}}</td>
+      </tr>
+
+      <tr class="group-head"><td colspan="5">Deliveries and clinical safety</td></tr>
+      <tr>
+        <td><span class="m-name">Deliveries confirmed</span><span class="m-desc">Births reported by mother or nurse</span></td>
+        <td class="num">{{DELIVERIES_CONFIRMED}}</td><td class="num">{{DELIVERIES_CONFIRMED_PREV}}</td>
+        <td class="chg {{DELIVERIES_CONFIRMED_CLASS}}">{{DELIVERIES_CONFIRMED_DELTA}}</td>
+        <td class="m-mean">{{DELIVERIES_CONFIRMED_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Delivered at your facility</span><span class="m-desc">Share of confirmed births at this facility</span></td>
+        <td class="num">{{FACILITY_SHARE}}%</td><td class="num">{{FACILITY_SHARE_PREV}}%</td>
+        <td class="chg {{FACILITY_SHARE_CLASS}}">{{FACILITY_SHARE_DELTA}}</td>
+        <td class="m-mean">{{FACILITY_SHARE_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Cases escalated to a nurse</span><span class="m-desc">Concerns, silence and callback requests</span></td>
+        <td class="num">{{ESCALATIONS}}</td><td class="num">{{ESCALATIONS_PREV}}</td>
+        <td class="chg {{ESCALATIONS_CLASS}}">{{ESCALATIONS_DELTA}}</td>
+        <td class="m-mean">{{ESCALATIONS_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Danger signs caught</span><span class="m-desc">Urgent symptoms detected in replies</span></td>
+        <td class="num">{{DANGER_SIGNS}}</td><td class="num">{{DANGER_SIGNS_PREV}}</td>
+        <td class="chg {{DANGER_SIGNS_CLASS}}">{{DANGER_SIGNS_DELTA}}</td>
+        <td class="m-mean">{{DANGER_SIGNS_MEAN}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Opt-outs</span><span class="m-desc">Mothers who withdrew from messaging</span></td>
+        <td class="num">{{OPT_OUTS}}</td><td class="num">{{OPT_OUTS_PREV}}</td>
+        <td class="chg {{OPT_OUTS_CLASS}}">{{OPT_OUTS_DELTA}}</td>
+        <td class="m-mean">{{OPT_OUTS_MEAN}}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page-break"></div>
+
+<div class="masthead">
+  <div class="brand-row">
+    <span class="brand-mark">HealthBridge Solutions</span>
+    <span class="brand-sub">What we would act on next</span>
+  </div>
+</div>
+
+<div class="section">
+  <span class="section-kicker">The safety net</span>
+  <h2>What the system caught before it became an emergency.</h2>
+  <div class="safety-row">
+    <div class="safety">
+      <div class="s-value">{{ESCALATIONS}}</div>
+      <span class="s-label">Cases routed to a nurse rather than left unanswered</span>
+    </div>
+    <div class="safety">
+      <div class="s-value">{{DANGER_SIGNS}}</div>
+      <span class="s-label">Danger-sign messages detected and escalated immediately</span>
+    </div>
+    <div class="safety">
+      <div class="s-value">{{NOSHOWS_RECOVERED}}</div>
+      <span class="s-label">Missed visits recovered through follow-up</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <span class="section-kicker">Three moves for {{NEXT_MONTH}}</span>
+  <h2>Specific, scoped, and tied to the numbers.</h2>
+</div>
+
+<div class="action">
+  <div class="action-head">
+    <span class="action-num">1</span>
+    <span class="action-title">{{ACTION_1_TITLE}}</span>
+  </div>
+  <div class="action-body">{{ACTION_1_BODY}}</div>
+</div>
+
+<div class="action">
+  <div class="action-head">
+    <span class="action-num">2</span>
+    <span class="action-title">{{ACTION_2_TITLE}}</span>
+  </div>
+  <div class="action-body">{{ACTION_2_BODY}}</div>
+</div>
+
+<div class="action">
+  <div class="action-head">
+    <span class="action-num">3</span>
+    <span class="action-title">{{ACTION_3_TITLE}}</span>
+  </div>
+  <div class="action-body">{{ACTION_3_BODY}}</div>
+</div>
+
+<div class="signoff">
+  <p>{{SIGNOFF}}</p>
+  <div class="sig-name">Ramadhan Omar</div>
+  <div class="sig-role">Registered Nurse · Founder, HealthBridge Solutions</div>
+</div>
+
+<div class="method">
+  <strong>How these numbers are produced.</strong> Every figure is counted directly from the follow-up
+  system's own records for {{REPORT_MONTH}} — no estimates and no manual entry. Attendance and no-show
+  figures are based on visit reminders issued in the period and the responses recorded against them.
+  Revenue is an estimate only, calculated from confirmed visits and facility deliveries using the
+  standard fees agreed with your facility; it is not a billing statement. This report is confidential
+  to {{FACILITY}}. Generated {{GENERATED_ON}}.
+</div>
+
+</body>
+</html>
