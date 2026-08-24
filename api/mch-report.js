@@ -1,31 +1,58 @@
 /**
  * POST /api/mch-report
  *
- * Turns two Monthly_Metrics rows into the finished HealthBridge MCH monthly PDF.
- * Called once a month by Make scenario 07.
+ * Turns two Monthly_Metrics rows into the finished HealthBridge MCH monthly
+ * PDF, uploads it to Vercel Blob storage, and returns a plain JSON object
+ * containing a public URL.
  *
+ * ---------------------------------------------------------------------------
+ * WHY IT WORKS THIS WAY (do not "simplify" this back to returning the PDF)
+ * ---------------------------------------------------------------------------
+ * Make.com could not be made to carry the PDF bytes from this endpoint into
+ * the Google Drive upload module. Three different transports were tried and
+ * each one corrupted the file in a different way:
+ *
+ *   1. Raw binary response  + {{160.data}}
+ *        -> Drive received: {"0":37,"1":80,"2":68,...}   (JSON byte map)
+ *   2. JSON {pdfBase64}     + {{160.data.pdfBase64}}
+ *        -> Drive received: 37,80,68,70,45,...           (comma-joined ints)
+ *   3. Plain base64 body    + {{toBinary(160.data; "base64")}}
+ *        -> Drive received: 147267 bytes of binary garbage (length preserved,
+ *           contents wrong -- a 1:1 mis-encoding of the base64 text)
+ *
+ * All three are Make coercing a buffer through generic stringification. Rather
+ * than keep guessing at its internals, this version takes Make out of the
+ * binary path completely: the PDF never travels through a Make module as data.
+ * Vercel writes the file to Blob storage and hands Make a URL, which is just
+ * text. Make then uses its "Get a File" HTTP module -- purpose-built to fetch
+ * a URL into a proper Make file buffer -- and passes that to Google Drive.
+ * Each tool does the job it was designed for.
+ *
+ * ---------------------------------------------------------------------------
  * Body:
  * {
  *   "secret":   "<MCH_REPORT_SECRET>",
  *   "meta":     { facility, reportMonth, nextMonth, preparedFor, generatedOn },
  *   "current":  { ...Monthly_Metrics row for the reporting month },
  *   "previous": { ...Monthly_Metrics row for the month before },
- *   "format":   "pdf" | "html"        // html is handy while iterating
+ *   "format":   "pdf" | "html"        // html returns the markup, for design work
  * }
  *
- * Returns: application/pdf (binary)
+ * Returns (format "pdf"):
+ * {
+ *   "url":      "https://<blob-host>/mch-reports/....pdf",
+ *   "filename": "MCH-Impact-Report-July-2026.pdf",
+ *   "bytes":    112233
+ * }
  *
  * Env vars required:
- *   MCH_REPORT_SECRET   shared secret, must match what Make sends
- *   ANTHROPIC_API_KEY   used to draft the narrative sections
+ *   MCH_REPORT_SECRET      shared secret, must match what Make sends
+ *   ANTHROPIC_API_KEY      used to draft the narrative sections
+ *   BLOB_READ_WRITE_TOKEN  auto-injected by Vercel once a Blob store is
+ *                          connected to the project (Storage tab -> Blob)
  *
  * Vercel project settings required:
- *   Node.js Version = 22.x or later (Settings -> General -> Node.js Version).
- *   @sparticuz/chromium >= 147 requires it; older Node runtimes are built on
- *   an Amazon Linux image that is missing shared libraries (libnss3.so etc.)
- *   the current Chromium binary needs -- that mismatch is what "Failed to
- *   launch the browser process" / "libnss3.so: cannot open shared object
- *   file" means if you see it again after a @sparticuz/chromium upgrade.
+ *   Node.js Version = 22.x or later (@sparticuz/chromium 147+ requires it).
  */
 
 const fs = require("fs");
@@ -206,11 +233,9 @@ function fillTemplate(tokens) {
 }
 
 /**
- * Chromium and puppeteer-core are loaded lazily, inside this function, not at
- * module load time. @sparticuz/chromium 147+ ships ESM-only, so a top-level
- * require() would crash the function on cold start even for requests that
- * never render a PDF (e.g. a bad secret). Dynamic import() works from a
- * CommonJS file and defers the cost to the one code path that needs it.
+ * Chromium and puppeteer-core are loaded lazily. @sparticuz/chromium 147+ is
+ * ESM-only, so a top-level require() would crash the function on cold start
+ * even for requests that never render a PDF.
  */
 async function toPdf(html) {
   const { default: chromium } = await import("@sparticuz/chromium");
@@ -274,21 +299,24 @@ module.exports = async (req, res) => {
 
     const pdf = await toPdf(html);
 
-    // Returned as plain base64 text -- the ENTIRE response body, no JSON
-    // wrapper. Two things were tried and failed on the Make.com side of this
-    // pipeline before landing here:
-    //   1. Raw binary response + Make's raw buffer reference ({{module.data}})
-    //      -> the bytes arrived in Drive as a JSON map: {"0":37,"1":80,...}
-    //   2. Base64 wrapped in a JSON response + a nested field reference
-    //      ({{module.data.pdfBase64}}) -> arrived as comma-joined decimal
-    //      bytes: "37,80,68,70,..."
-    // Both are variants of Make serializing the buffer via generic array/
-    // object stringification instead of a true binary passthrough. A plain
-    // base64 string as the WHOLE response body, referenced as the module's
-    // top-level output (not a sub-field of a parsed JSON object), is the
-    // narrowest change that avoids both failure modes.
-    res.setHeader("content-type", "text/plain");
-    return res.status(200).send(pdf.toString("base64"));
+    const safeMonth = String(meta.reportMonth || "report").replace(/\s+/g, "-");
+    const filename = `MCH-Impact-Report-${safeMonth}.pdf`;
+
+    // Upload to Blob storage and hand back a URL. addRandomSuffix keeps
+    // re-runs for the same month from overwriting each other, which matters
+    // while testing and is harmless in production.
+    const { put } = await import("@vercel/blob");
+    const blob = await put(`mch-reports/${filename}`, pdf, {
+      access: "public",
+      contentType: "application/pdf",
+      addRandomSuffix: true,
+    });
+
+    return res.status(200).json({
+      url: blob.url,
+      filename,
+      bytes: pdf.length,
+    });
   } catch (err) {
     console.error("mch-report failed:", err);
     return res.status(500).json({ error: String(err.message || err) });
