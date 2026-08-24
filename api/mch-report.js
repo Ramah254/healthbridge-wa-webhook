@@ -302,14 +302,27 @@ module.exports = async (req, res) => {
     const safeMonth = String(meta.reportMonth || "report").replace(/\s+/g, "-");
     const filename = `MCH-Impact-Report-${safeMonth}.pdf`;
 
-    // Upload to Blob storage and hand back a URL. addRandomSuffix keeps
-    // re-runs for the same month from overwriting each other, which matters
-    // while testing and is harmless in production.
+    // Upload to Blob storage and hand back a URL. Vercel's auto-injected env
+    // var name for a connected store isn't always the plain BLOB_READ_WRITE_TOKEN
+    // -- it can be store-prefixed (e.g. blob_READ_WRITE_TOKEN). Check both
+    // rather than betting on one.
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.blob_READ_WRITE_TOKEN;
+    if (!blobToken) {
+      throw new Error(
+        "No Blob token found in either BLOB_READ_WRITE_TOKEN or blob_READ_WRITE_TOKEN. " +
+        "Check Vercel -> Storage -> mchblob -> .env.local tab for the exact variable name, " +
+        "and confirm it's set under Settings -> Environment Variables for Production."
+      );
+    }
+
+    // addRandomSuffix keeps re-runs for the same month from overwriting each
+    // other, which matters while testing and is harmless in production.
     const { put } = await import("@vercel/blob");
     const blob = await put(`mch-reports/${filename}`, pdf, {
       access: "public",
       contentType: "application/pdf",
       addRandomSuffix: true,
+      token: blobToken,
     });
 
     return res.status(200).json({
