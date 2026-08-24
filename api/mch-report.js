@@ -66,7 +66,7 @@ const num = (v) => Number(v || 0);
 
 /** Long form used on the KPI cards. */
 function delta(cur, prev, unit, inverted) {
-  const d = cur - prev;
+  const d = Math.round((cur - prev) * 10) / 10;
   if (d === 0) return { text: "No change", cls: "flat" };
   const sign = d > 0 ? "+" : "\u2212";
   let cls = d > 0 ? "up" : "down";
@@ -76,7 +76,7 @@ function delta(cur, prev, unit, inverted) {
 
 /** Compact form used in the Change column of the table. */
 function short(cur, prev, unit) {
-  const d = cur - prev;
+  const d = Math.round((cur - prev) * 10) / 10;
   if (d === 0) return "\u2013";
   return `${d > 0 ? "+" : "\u2212"}${Math.abs(d)}${unit}`;
 }
