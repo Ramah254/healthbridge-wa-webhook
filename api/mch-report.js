@@ -273,22 +273,22 @@ module.exports = async (req, res) => {
     }
 
     const pdf = await toPdf(html);
-    const safeMonth = String(meta.reportMonth || "report").replace(/\s+/g, "-");
-    const filename = `MCH-Impact-Report-${safeMonth}.pdf`;
 
-    // Returned as base64 inside JSON, not as a raw binary response. Make's HTTP
-    // module ("Make a request") has proven unreliable at passing a raw binary
-    // response straight into the Google Drive upload module's Data field on
-    // this account -- the bytes were arriving re-serialized as JSON text
-    // instead of the actual file. Base64-in-JSON sidesteps that: Make's
-    // "buffer" typed fields (like Google Drive's Data field) accept base64
-    // text and decode it correctly, which is the same representation Make
-    // uses internally for file bundles.
-    res.setHeader("content-type", "application/json");
-    return res.status(200).json({
-      filename,
-      pdfBase64: pdf.toString("base64"),
-    });
+    // Returned as plain base64 text -- the ENTIRE response body, no JSON
+    // wrapper. Two things were tried and failed on the Make.com side of this
+    // pipeline before landing here:
+    //   1. Raw binary response + Make's raw buffer reference ({{module.data}})
+    //      -> the bytes arrived in Drive as a JSON map: {"0":37,"1":80,...}
+    //   2. Base64 wrapped in a JSON response + a nested field reference
+    //      ({{module.data.pdfBase64}}) -> arrived as comma-joined decimal
+    //      bytes: "37,80,68,70,..."
+    // Both are variants of Make serializing the buffer via generic array/
+    // object stringification instead of a true binary passthrough. A plain
+    // base64 string as the WHOLE response body, referenced as the module's
+    // top-level output (not a sub-field of a parsed JSON object), is the
+    // narrowest change that avoids both failure modes.
+    res.setHeader("content-type", "text/plain");
+    return res.status(200).send(pdf.toString("base64"));
   } catch (err) {
     console.error("mch-report failed:", err);
     return res.status(500).json({ error: String(err.message || err) });
