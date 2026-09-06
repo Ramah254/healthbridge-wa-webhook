@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ODPC Data Protection Readiness Report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 15mm 18mm 15mm;
+    @bottom-left {
+      content: "HealthBridge Solutions  ·  ODPC Data Protection Readiness Report  ·  {{REPORT_DATE}}";
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+      padding-top: 4mm;
+    }
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+      padding-top: 4mm;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
+    font-size: 9.2pt;
+    line-height: 1.5;
+    color: #1E293B;
+    margin: 0;
+  }
+
+  .masthead {
+    border-bottom: 2.5pt solid #0F172A;
+    padding-bottom: 2.5mm;
+    margin-bottom: 5mm;
+  }
+  .brand-row { display: flex; align-items: baseline; }
+  .brand-mark {
+    font-size: 13.5pt; font-weight: bold; color: #1A56DB;
+    letter-spacing: -0.4pt; white-space: nowrap;
+  }
+  .brand-sub {
+    margin-left: auto; font-size: 8pt; color: #64748B;
+    text-transform: uppercase; letter-spacing: 1.2pt;
+  }
+
+  h1.report-title {
+    font-size: 21pt;
+    font-weight: bold;
+    color: #0F172A;
+    letter-spacing: -0.7pt;
+    line-height: 1.15;
+    margin: 4mm 0 3mm 0;
+  }
+
+  table.meta { width: 100%; border-collapse: collapse; margin-bottom: 5mm; }
+  table.meta td {
+    border-top: 0.6pt solid #E2E8F0;
+    border-bottom: 0.6pt solid #E2E8F0;
+    padding: 2.5mm 0;
+    vertical-align: top;
+    width: 25%;
+  }
+  .meta-label {
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 1pt;
+    color: #94A3B8; display: block; margin-bottom: 1mm;
+  }
+  .meta-value { font-size: 10pt; color: #0F172A; font-weight: bold; }
+
+  .headline {
+    background: #EFF4FE;
+    border-left: 3pt solid #1A56DB;
+    padding: 4mm 4.5mm;
+    margin-bottom: 5mm;
+  }
+  .headline .kicker {
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 1.2pt;
+    color: #1A56DB; font-weight: bold; display: block; margin-bottom: 2mm;
+  }
+  .headline p { margin: 0; font-size: 10pt; line-height: 1.45; color: #0F172A; }
+
+  /* status pill cards, replacing KPI deltas which don't apply to a point-in-time audit */
+  .stat-row { display: flex; margin: 0 -1.6mm 5mm -1.6mm; }
+  .stat {
+    flex: 1; margin: 0 1.6mm;
+    border: 0.7pt solid #DCE6F8;
+    border-top: 2.2pt solid #1A56DB;
+    padding: 3mm 2.6mm 2.6mm 2.6mm;
+  }
+  .stat.warn { border-top-color: #C2410C; }
+  .stat.bad  { border-top-color: #B91C1C; }
+  .stat .stat-label {
+    font-size: 6.8pt; text-transform: uppercase; letter-spacing: 0.8pt;
+    color: #64748B; line-height: 1.3; min-height: 7mm; display: block;
+  }
+  .stat .stat-value {
+    font-size: 17pt; font-weight: bold; color: #0F172A;
+    letter-spacing: -0.6pt; line-height: 1; margin: 1mm 0 1.2mm 0;
+  }
+  .stat .stat-note { font-size: 7.3pt; color: #64748B; }
+
+  h2 {
+    font-size: 13pt; color: #0F172A; font-weight: bold;
+    letter-spacing: -0.3pt;
+    margin: 0 0 1.5mm 0;
+  }
+  .section-kicker {
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 1.2pt;
+    color: #1A56DB; font-weight: bold; display: block; margin-bottom: 1.5mm;
+  }
+  .section { margin-bottom: 5mm; }
+  .section p { margin: 0 0 2.5mm 0; }
+  .section p:last-child { margin-bottom: 0; }
+
+  table.metrics { width: 100%; border-collapse: collapse; margin-top: 1.5mm; }
+  table.metrics thead th {
+    background: #0F172A; color: #FFFFFF;
+    font-size: 7pt; text-transform: uppercase; letter-spacing: 0.7pt;
+    padding: 2mm 2.2mm; text-align: left; font-weight: bold;
+  }
+  table.metrics thead th.num { text-align: right; }
+  table.metrics tbody tr { page-break-inside: avoid; }
+  table.metrics tbody td {
+    padding: 1.1mm 2.1mm;
+    border-bottom: 0.5pt solid #E8EEF7;
+    vertical-align: top;
+    font-size: 7.9pt;
+  }
+  table.metrics tbody tr:nth-child(even) td { background: #F8FAFD; }
+  table.metrics td.num { text-align: right; font-weight: bold; color: #0F172A; white-space: nowrap; }
+  table.metrics td.status { text-align: right; font-weight: bold; white-space: nowrap; }
+  .ok   { color: #15803D; }
+  .warn { color: #C2410C; }
+  .bad  { color: #B91C1C; }
+  .m-name { font-weight: bold; color: #0F172A; display: block; }
+  .m-desc { font-size: 6.7pt; color: #64748B; display: block; line-height: 1.3; margin-top: 0.3mm; }
+  tr.group-head td {
+    background: #EFF4FE !important;
+    font-size: 6.8pt; text-transform: uppercase; letter-spacing: 1pt;
+    color: #1A56DB; font-weight: bold; padding: 1.4mm 2.2mm;
+    border-bottom: 0.7pt solid #DCE6F8;
+  }
+
+  .signoff { margin-top: 6mm; padding-top: 4mm; border-top: 0.6pt solid #E2E8F0; }
+  .signoff p { font-size: 9pt; line-height: 1.55; margin: 0 0 3mm 0; }
+  .sig-name { font-weight: bold; color: #0F172A; font-size: 9.5pt; }
+  .sig-role { font-size: 7.8pt; color: #64748B; margin-top: 0.5mm; }
+
+  .method {
+    margin-top: 6mm; padding-top: 3mm; border-top: 0.6pt solid #E2E8F0;
+    font-size: 7.3pt; color: #64748B; line-height: 1.5;
+  }
+
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ============ PAGE 1 ============ -->
+<div class="masthead">
+  <div class="brand-row">
+    <span class="brand-mark">HealthBridge Solutions</span>
+    <span class="brand-sub">ODPC Data Protection Readiness Report</span>
+  </div>
+</div>
+
+<h1 class="report-title">Data protection readiness — {{FACILITY}}</h1>
+
+<table class="meta">
+  <tr>
+    <td><span class="meta-label">Facility</span><span class="meta-value">{{FACILITY}}</span></td>
+    <td><span class="meta-label">Report date</span><span class="meta-value">{{REPORT_DATE}}</span></td>
+    <td><span class="meta-label">Data Controller reg. no.</span><span class="meta-value">{{DC_REG_NO}}</span></td>
+    <td><span class="meta-label">Data Processor reg. no.</span><span class="meta-value">{{DP_REG_NO}}</span></td>
+  </tr>
+</table>
+
+<div class="headline">
+  <span class="kicker">Overall position</span>
+  <p>{{HEADLINE}}</p>
+</div>
+
+<div class="stat-row">
+  <div class="stat {{CONSENT_STAT_CLASS}}">
+    <span class="stat-label">Consent coverage</span>
+    <div class="stat-value">{{CONSENT_COVERAGE_PCT}}%</div>
+    <span class="stat-note">of active mothers with recorded consent</span>
+  </div>
+  <div class="stat {{PURGE_STAT_CLASS}}">
+    <span class="stat-label">Retention purge</span>
+    <div class="stat-value">{{RETENTION_DAYS}}d</div>
+    <span class="stat-note">rolling window before free-text fields are scrubbed</span>
+  </div>
+  <div class="stat {{CONFIDENTIAL_STAT_CLASS}}">
+    <span class="stat-label">Confidential mode</span>
+    <div class="stat-value">{{CONFIDENTIAL_COUNT}}/{{CONFIDENTIAL_TOTAL}}</div>
+    <span class="stat-note">scenarios with confidential mode enabled</span>
+  </div>
+</div>
+
+<!-- ============ PAGE 2 ============ -->
+<div class="page-break"></div>
+
+<div class="masthead">
+  <div class="brand-row">
+    <span class="brand-mark">HealthBridge Solutions</span>
+    <span class="brand-sub">Compliance detail</span>
+  </div>
+</div>
+
+<div class="section">
+  <table class="metrics">
+    <thead>
+      <tr><th>Control</th><th class="num">Value</th><th class="status">Status</th></tr>
+    </thead>
+    <tbody>
+      <tr class="group-head"><td colspan="3">Legal basis and registration</td></tr>
+      <tr>
+        <td><span class="m-name">ODPC Data Controller registration</span><span class="m-desc">Ramadhan Omar, sole operator</span></td>
+        <td class="num">{{DC_REG_NO}}</td>
+        <td class="status ok">Active</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">ODPC Data Processor registration</span><span class="m-desc">Processing on behalf of client hospitals</span></td>
+        <td class="num">{{DP_REG_NO}}</td>
+        <td class="status ok">Active</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Consent enforcement</span><span class="m-desc">Exact-case ConsentGiven=YES required before any processing</span></td>
+        <td class="num">{{CONSENT_COVERAGE_PCT}}%</td>
+        <td class="status {{CONSENT_STAT_CLASS}}">{{CONSENT_STAT_LABEL}}</td>
+      </tr>
+
+      <tr class="group-head"><td colspan="3">Retention and purging</td></tr>
+      <tr>
+        <td><span class="m-name">Automated purge scenario</span><span class="m-desc">Weekly archiver, ODPC-driven retention window</span></td>
+        <td class="num">{{RETENTION_DAYS}} days</td>
+        <td class="status ok">{{ARCHIVER_STATE}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Last purge run</span><span class="m-desc">Most recent scheduled execution</span></td>
+        <td class="num">{{LAST_PURGE_DATE}}</td>
+        <td class="status ok">Confirmed</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Rows purged this cycle</span><span class="m-desc">Phone, reply text, patient name and nurse notes past window</span></td>
+        <td class="num">{{ROWS_PURGED}}</td>
+        <td class="status ok">Logged</td>
+      </tr>
+
+      <tr class="group-head"><td colspan="3">Technical safeguards</td></tr>
+      <tr>
+        <td><span class="m-name">Confidential mode coverage</span><span class="m-desc">Scenarios handling identifiable patient data</span></td>
+        <td class="num">{{CONFIDENTIAL_COUNT}}/{{CONFIDENTIAL_TOTAL}}</td>
+        <td class="status {{CONFIDENTIAL_STAT_CLASS}}">{{CONFIDENTIAL_STAT_LABEL}}</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Audit trail</span><span class="m-desc">Every data change logged with actor and timestamp</span></td>
+        <td class="num">{{AUDITLOG_ROWS_MONTH}}</td>
+        <td class="status ok">Active</td>
+      </tr>
+
+      <tr class="group-head"><td colspan="3">Data subject rights</td></tr>
+      <tr>
+        <td><span class="m-name">Opt-outs honoured</span><span class="m-desc">Mothers who replied STOP, this month</span></td>
+        <td class="num">{{OPT_OUTS_MONTH}}</td>
+        <td class="status ok">Processed</td>
+      </tr>
+      <tr>
+        <td><span class="m-name">Archived records</span><span class="m-desc">Mothers removed from active processing</span></td>
+        <td class="num">{{ARCHIVED_COUNT}}</td>
+        <td class="status ok">Recorded</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ PAGE 3 ============ -->
+<div class="page-break"></div>
+
+<div class="masthead">
+  <div class="brand-row">
+    <span class="brand-mark">HealthBridge Solutions</span>
+    <span class="brand-sub">What this means for your board</span>
+  </div>
+</div>
+
+<div class="section">
+  <span class="section-kicker">Summary</span>
+  <h2>Where your data protection posture stands today.</h2>
+  <p>{{SUMMARY_BODY}}</p>
+</div>
+
+<div class="signoff">
+  <p>{{SIGNOFF}}</p>
+  <div class="sig-name">Ramadhan Omar</div>
+  <div class="sig-role">Registered Nurse · Data Controller &amp; Data Processor (ODPC) · Founder, HealthBridge Solutions</div>
+</div>
+
+<div class="method">
+  <strong>How this report is produced.</strong> Every figure is read directly from HealthBridge's own
+  operational records for {{FACILITY}} as of {{REPORT_DATE}} — no estimates. This report describes the
+  technical and organisational measures in place under Kenya's Data Protection Act, 2019, and is provided
+  for {{FACILITY}}'s governance and board reference. It is not a legal opinion. Confidential to {{FACILITY}}.
+</div>
+
+</body>
+</html>
