@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Digital Immunization Passport</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 15mm 18mm 15mm;
+    @bottom-left {
+      content: "HealthBridge Solutions  ·  Digital Immunization Passport";
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+      padding-top: 4mm;
+    }
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: "DejaVu Sans", Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #94A3B8;
+      padding-top: 4mm;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
+    font-size: 9.2pt; line-height: 1.5; color: #1E293B; margin: 0;
+  }
+  .masthead { border-bottom: 2.5pt solid #0F172A; padding-bottom: 2.5mm; margin-bottom: 5mm; }
+  .brand-row { display: flex; align-items: baseline; }
+  .brand-mark { font-size: 13.5pt; font-weight: bold; color: #1A56DB; letter-spacing: -0.4pt; white-space: nowrap; }
+  .brand-sub { margin-left: auto; font-size: 8pt; color: #64748B; text-transform: uppercase; letter-spacing: 1.2pt; }
+  h1.report-title {
+    font-size: 20pt; font-weight: bold; color: #0F172A;
+    letter-spacing: -0.6pt; line-height: 1.15; margin: 4mm 0 3mm 0;
+  }
+  .id-card {
+    display: flex; border: 0.7pt solid #DCE6F8; border-top: 2.2pt solid #1A56DB;
+    padding: 4mm; margin-bottom: 5mm;
+  }
+  .id-card .details { flex: 1; }
+  .id-card .qr-box { width: 32mm; text-align: center; padding-left: 4mm; }
+  .id-card .qr-box img { width: 30mm; height: 30mm; }
+  .id-card .qr-box .qr-label { font-size: 6.3pt; color: #94A3B8; margin-top: 1.5mm; }
+  table.meta { width: 100%; border-collapse: collapse; }
+  table.meta td {
+    border-top: 0.6pt solid #E2E8F0; border-bottom: 0.6pt solid #E2E8F0;
+    padding: 2.5mm 3mm 2.5mm 0; vertical-align: top; width: 50%;
+  }
+  .meta-label { font-size: 7pt; text-transform: uppercase; letter-spacing: 1pt; color: #94A3B8; display: block; margin-bottom: 1mm; }
+  .meta-value { font-size: 10pt; color: #0F172A; font-weight: bold; }
+  .headline { background: #EFF4FE; border-left: 3pt solid #1A56DB; padding: 4mm 4.5mm; margin-bottom: 5mm; }
+  .headline .kicker { font-size: 7pt; text-transform: uppercase; letter-spacing: 1.2pt; color: #1A56DB; font-weight: bold; display: block; margin-bottom: 2mm; }
+  .headline p { margin: 0; font-size: 9.5pt; line-height: 1.5; color: #0F172A; }
+  h2 { font-size: 13pt; color: #0F172A; font-weight: bold; letter-spacing: -0.3pt; margin: 0 0 1.5mm 0; }
+  .section-kicker { font-size: 7pt; text-transform: uppercase; letter-spacing: 1.2pt; color: #1A56DB; font-weight: bold; display: block; margin-bottom: 1.5mm; }
+  .section { margin-bottom: 5mm; }
+  table.doses { width: 100%; border-collapse: collapse; margin-top: 1.5mm; }
+  table.doses thead th {
+    background: #0F172A; color: #FFFFFF; font-size: 7pt; text-transform: uppercase;
+    letter-spacing: 0.7pt; padding: 2mm 2.2mm; text-align: left; font-weight: bold;
+  }
+  table.doses thead th.num { text-align: right; }
+  table.doses tbody tr { page-break-inside: avoid; }
+  table.doses tbody td { padding: 1.6mm 2.2mm; border-bottom: 0.5pt solid #E8EEF7; vertical-align: top; font-size: 8.3pt; }
+  table.doses tbody tr:nth-child(even) td { background: #F8FAFD; }
+  table.doses td.date { text-align: right; font-weight: bold; color: #0F172A; white-space: nowrap; }
+  .status-given { color: #15803D; font-weight: bold; }
+  .status-due { color: #C2410C; font-weight: bold; }
+  .signoff { margin-top: 6mm; padding-top: 4mm; border-top: 0.6pt solid #E2E8F0; }
+  .signoff p { font-size: 8.8pt; line-height: 1.55; margin: 0 0 3mm 0; }
+  .sig-role { font-size: 7.8pt; color: #64748B; margin-top: 0.5mm; }
+  .method { margin-top: 6mm; padding-top: 3mm; border-top: 0.6pt solid #E2E8F0; font-size: 7.3pt; color: #64748B; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <div class="brand-row">
+    <span class="brand-mark">HealthBridge Solutions</span>
+    <span class="brand-sub">Digital Immunization Passport</span>
+  </div>
+</div>
+
+<h1 class="report-title">{{BABY_NAME}}'s Immunization Record</h1>
+
+<div class="id-card">
+  <div class="details">
+    <table class="meta">
+      <tr>
+        <td><span class="meta-label">Child's name</span><span class="meta-value">{{BABY_NAME}}</span></td>
+        <td><span class="meta-label">Date of birth</span><span class="meta-value">{{DOB}}</span></td>
+      </tr>
+      <tr>
+        <td><span class="meta-label">Mother / guardian</span><span class="meta-value">{{MOTHER_NAME}}</span></td>
+        <td><span class="meta-label">Facility</span><span class="meta-value">{{FACILITY}}</span></td>
+      </tr>
+      <tr>
+        <td><span class="meta-label">Record ID</span><span class="meta-value">{{MOTHER_ID}}</span></td>
+        <td><span class="meta-label">Generated</span><span class="meta-value">{{GENERATED_ON}}</span></td>
+      </tr>
+    </table>
+  </div>
+  <div class="qr-box">
+    <img src="{{QR_DATA_URI}}" alt="Verification QR code">
+    <div class="qr-label">Scan to verify record details</div>
+  </div>
+</div>
+
+<div class="headline">
+  <span class="kicker">For schools and daycares</span>
+  <p>This document is an official digital record of {{BABY_NAME}}'s immunizations under Kenya's KEPI schedule, generated directly from {{FACILITY}}'s HealthBridge follow-up system. It may be presented for school or daycare enrollment in place of, or alongside, the physical Mother &amp; Child Health booklet.</p>
+</div>
+
+<div class="section">
+  <span class="section-kicker">Immunization record</span>
+  <h2>KEPI schedule, birth through 18 months.</h2>
+  <table class="doses">
+    <thead>
+      <tr><th>Vaccine / dose</th><th class="num">Status</th><th class="num">Date given</th></tr>
+    </thead>
+    <tbody>
+      {{DOSE_ROWS}}
+    </tbody>
+  </table>
+</div>
+
+<div class="signoff">
+  <p>This record reflects doses logged through HealthBridge's WhatsApp-based follow-up system as of the generation date above. Please confirm any recent doses directly with {{FACILITY}} if this document is more than a few weeks old.</p>
+  <div class="sig-role">HealthBridge Solutions · Maternal &amp; Child Health Follow-Up</div>
+</div>
+
+<div class="method">
+  <strong>About this document.</strong> Doses are recorded when a caregiver confirms them via WhatsApp or a nurse updates the record directly. This is a convenience record generated from those entries, not a replacement for the official Ministry of Health Mother &amp; Child Health booklet. Confidential to {{MOTHER_NAME}} and {{FACILITY}}.
+</div>
+
+</body>
+</html>
