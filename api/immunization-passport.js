@@ -3,46 +3,13 @@
  *
  * Renders a mother's Digital Immunization Passport (KEPI dose record) as a
  * PDF with an embedded QR code, uploads it to Vercel Blob, and returns a
- * plain JSON URL. Same transport pattern as odpc-report.js and mch-report.js:
- * Make cannot carry raw PDF bytes without corruption, so this endpoint does
- * the rendering itself and hands back a Blob URL for Make to pull with
- * http:ActionGetFile before sending it on via WhatsApp document header.
+ * plain JSON URL. Same transport pattern as odpc-report.js and mch-report.js.
  *
- * ---------------------------------------------------------------------------
- * Body:
- * {
- *   "secret": "<PASSPORT_REPORT_SECRET>",
- *   "motherId": "MCH-2026-xxxxxxxx",
- *   "motherName": "Jane Doe",
- *   "babyName": "Baby Doe",
- *   "dob": "12/08/2026",
- *   "facility": "Example Hospital",
- *   "generatedOn": "6 September 2026",
- *   "doses": [
- *     { "label": "BCG / OPV-0 (birth)", "status": "given", "date": "12/08/2026" },
- *     { "label": "6-week: Penta-1, OPV-1, PCV10-1, Rota-1", "status": "given", "date": "24/09/2026" },
- *     { "label": "10-week: Penta-2, OPV-2, PCV10-2, Rota-2", "status": "due", "date": "" }
- *   ]
- * }
+ * Body: { secret, motherId, motherName, babyName, dob, facility, generatedOn,
+ *         doses: [{label, status, date}], format? }
+ * Returns: { url, filename, bytes }
  *
- * "status" is "given" or "due". Rows are rendered in the order supplied —
- * Make should send all applicable KEPI stages, birth through 18 months,
- * whether or not each has been given yet.
- *
- * Returns:
- * { "url": "...", "filename": "Immunization-Passport-Baby-Doe.pdf", "bytes": 12345 }
- *
- * Env vars required:
- *   PASSPORT_REPORT_SECRET  shared secret, must match what Make sends
- *   BLOB_READ_WRITE_TOKEN   (or blob_READ_WRITE_TOKEN) — same Blob store as mch-report/odpc-report
- *
- * Vercel project settings required: same project as odpc-report.js/mch-report.js.
- * package.json needs "qrcode" added as a dependency (no native deps, pure JS).
- *
- * QR code content is a plain verification string (record ID, child's name,
- * DOB) — not a link to a live verification page. Standing that page up is a
- * later enhancement; v1 keeps the scope to "produce a trustworthy-looking,
- * presentable record", which is what schools/daycares actually need.
+ * Env vars: PASSPORT_REPORT_SECRET, BLOB_READ_WRITE_TOKEN (or blob_READ_WRITE_TOKEN)
  */
 
 const fs = require("fs");
@@ -128,9 +95,17 @@ module.exports = async (req, res) => {
     };
 
     const QRCode = require("qrcode");
-    const qrText =
-      `HealthBridge KEPI Record | ${t.motherId} | ${t.babyName} | DOB ${t.dob} | ${t.facility}`;
-    const qrDataUri = await QRCode.toDataURL(qrText, { margin: 1, width: 240 });
+
+    // Verification URL — scanned by schools/daycares to confirm authenticity
+    const verifyUrl =
+      `https://healthbridge-wa-webhook.vercel.app/api/verify` +
+      `?id=${encodeURIComponent(t.motherId)}` +
+      `&name=${encodeURIComponent(t.babyName)}` +
+      `&dob=${encodeURIComponent(t.dob)}` +
+      `&facility=${encodeURIComponent(t.facility)}` +
+      `&issued=${encodeURIComponent(t.generatedOn)}`;
+
+    const qrDataUri = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 240 });
 
     const tokens = {
       BABY_NAME: esc(t.babyName),
@@ -152,14 +127,13 @@ module.exports = async (req, res) => {
 
     const pdf = await toPdf(html);
 
-    const safeBaby = String(t.babyName || "Baby").replace(/\s+/g, "-");
-    const filename = `Immunization-Passport-${safeBaby}.pdf`;
+    // Deterministic filename keyed on motherId — enables /api/verify to locate the blob
+    const filename = `Immunization-Passport-${t.motherId}.pdf`;
 
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.blob_READ_WRITE_TOKEN;
     if (!blobToken) {
       throw new Error(
-        "No Blob token found in either BLOB_READ_WRITE_TOKEN or blob_READ_WRITE_TOKEN. " +
-        "Same store as mch-report.js/odpc-report.js (mchblob) — confirm it's linked to this project too."
+        "No Blob token found in either BLOB_READ_WRITE_TOKEN or blob_READ_WRITE_TOKEN."
       );
     }
 
@@ -167,7 +141,7 @@ module.exports = async (req, res) => {
     const blob = await put(`immunization-passports/${filename}`, pdf, {
       access: "public",
       contentType: "application/pdf",
-      addRandomSuffix: true,
+      addRandomSuffix: false,   // deterministic URL — verify endpoint depends on this
       token: blobToken,
     });
 
