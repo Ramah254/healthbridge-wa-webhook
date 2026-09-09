@@ -19,38 +19,23 @@
     }
   }
   * { box-sizing: border-box; }
-  body {
-    font-family: "DejaVu Sans", Arial, Helvetica, sans-serif;
-    font-size: 9.2pt; line-height: 1.5; color: #1E293B; margin: 0;
-  }
+  body { font-family: "DejaVu Sans", Arial, Helvetica, sans-serif; font-size: 9.2pt; line-height: 1.5; color: #1E293B; margin: 0; }
   .masthead { border-bottom: 2.5pt solid #0F172A; padding-bottom: 2.5mm; margin-bottom: 5mm; }
   .brand-row { display: flex; align-items: baseline; }
   .brand-mark { font-size: 13.5pt; font-weight: bold; color: #1A56DB; letter-spacing: -0.4pt; white-space: nowrap; }
   .brand-sub { margin-left: auto; font-size: 8pt; color: #64748B; text-transform: uppercase; letter-spacing: 1.2pt; }
   h1.report-title { font-size: 20pt; font-weight: bold; color: #0F172A; letter-spacing: -0.6pt; line-height: 1.15; margin: 4mm 0 3mm 0; }
-  .draft-banner {
-    background: #FEF3C7; border: 1pt solid #D97706; color: #92400E;
-    padding: 3mm 4mm; margin-bottom: 5mm; font-weight: bold; font-size: 9.5pt;
-    text-align: center; letter-spacing: 0.5pt; text-transform: uppercase;
-  }
+  .draft-banner { background: #FEF3C7; border: 1pt solid #D97706; color: #92400E; padding: 3mm 4mm; margin-bottom: 5mm; font-weight: bold; font-size: 9.5pt; text-align: center; letter-spacing: 0.5pt; text-transform: uppercase; }
   table.meta { width: 100%; border-collapse: collapse; margin-bottom: 5mm; }
-  table.meta td {
-    border-top: 0.6pt solid #E2E8F0; border-bottom: 0.6pt solid #E2E8F0;
-    padding: 2.5mm 0; vertical-align: top; width: 33%;
-  }
+  table.meta td { border-top: 0.6pt solid #E2E8F0; border-bottom: 0.6pt solid #E2E8F0; padding: 2.5mm 0; vertical-align: top; width: 33%; }
   .meta-label { font-size: 7pt; text-transform: uppercase; letter-spacing: 1pt; color: #94A3B8; display: block; margin-bottom: 1mm; }
   .meta-value { font-size: 10pt; color: #0F172A; font-weight: bold; }
   h2.section { font-size: 12pt; color: #0F172A; margin: 6mm 0 2.5mm 0; border-bottom: 1pt solid #E2E8F0; padding-bottom: 1.5mm; }
   table.data { width: 100%; border-collapse: collapse; margin-bottom: 3mm; }
-  table.data th {
-    background: #F1F5F9; text-align: left; font-size: 7.5pt; text-transform: uppercase;
-    letter-spacing: 0.5pt; color: #64748B; padding: 2mm 2.5mm; border-bottom: 1pt solid #CBD5E1;
-  }
+  table.data th { background: #F1F5F9; text-align: left; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.5pt; color: #64748B; padding: 2mm 2.5mm; border-bottom: 1pt solid #CBD5E1; }
   table.data td { padding: 2.2mm 2.5mm; border-bottom: 0.6pt solid #E2E8F0; font-size: 9.5pt; }
   table.data td.num { text-align: right; font-weight: bold; color: #0F172A; }
-  .oos-note {
-    background: #F8FAFC; border-left: 3pt solid #94A3B8; padding: 4mm 4.5mm; margin: 4mm 0; font-size: 8.8pt; color: #475569;
-  }
+  .oos-note { background: #F8FAFC; border-left: 3pt solid #94A3B8; padding: 4mm 4.5mm; margin: 4mm 0; font-size: 8.8pt; color: #475569; }
   .oos-note ul { margin: 2mm 0 0 4mm; padding: 0; }
   .oos-note li { margin-bottom: 1mm; }
   .signoff { margin-top: 6mm; font-size: 8.8pt; color: #64748B; border-top: 0.6pt solid #E2E8F0; padding-top: 3mm; }
@@ -83,6 +68,7 @@
   <tr><td>No. of ANC Clients — Re-visit (2nd+ contact)</td><td class="num">{{ANC_REVISIT}}</td></tr>
   <tr><td>No. of ANC Clients — Total</td><td class="num">{{ANC_TOTAL}}</td></tr>
   <tr><td>No. of Clients completed 4th ANC Contacts</td><td class="num">{{ANC_4TH_VISIT}}</td></tr>
+  <tr><td>No. of Clients completed 8th ANC Contacts</td><td class="num">{{ANC_8TH_CONTACT}}</td></tr>
   <tr><td>No. of Clients given IPT (1st dose)</td><td class="num">{{IPTP1}}</td></tr>
   <tr><td>No. of Clients given IPT (2nd dose)</td><td class="num">{{IPTP2}}</td></tr>
   <tr><td>No. of Clients given IPT (3rd dose)</td><td class="num">{{IPTP3}}</td></tr>

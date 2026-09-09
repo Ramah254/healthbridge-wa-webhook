@@ -1,32 +1,18 @@
 /**
  * POST /api/moh711-report
  *
- * Renders a DRAFT MOH 711A pre-fill (ANC/PMTCT + Maternity sections only)
- * as a PDF and uploads it to Vercel Blob storage, returning a plain JSON URL.
- *
- * Deliberately a thin slice: HealthBridge only tracks ANC attendance and
- * deliveries. Family Planning, PMTCT/HIV, STI, TB, Blood Safety, ART, VCT,
- * CHANIS, delivery mode/outcomes/complications/deaths are NOT populated —
- * the PDF says so explicitly and is watermarked DRAFT — PENDING HRIO REVIEW.
- * The HRIO reconciles this against their own KHIS/DHIS2 screen before
- * submitting anything to a government system. Same transport pattern as
- * odpc-report.js and mch-report.js (Make cannot carry raw PDF bytes).
+ * MOH 711A DRAFT pre-fill — ANC/PMTCT + Maternity sections only.
+ * Watermarked DRAFT; HRIO reconciles against KHIS/DHIS2 before submission.
  *
  * Body:
  * {
- *   "secret": "<MOH711_REPORT_SECRET>",
- *   "facility": "Example Hospital",
- *   "month": "September 2026",
- *   "reportDate": "8 September 2026",
- *   "ancNew": 12, "ancRevisit": 34, "ancTotal": 46, "anc4thVisit": 9,
- *   "iptp1": "0", "iptp2": "0", "iptp3": "0",
- *   "totalDeliveries": 5,
- *   "format": "pdf" | "html"
+ *   secret, facility, month, reportDate,
+ *   ancNew, ancRevisit, ancTotal, anc4thVisit, anc8,
+ *   iptp1, iptp2, iptp3,
+ *   totalDeliveries,
+ *   format: "pdf" | "html"
  * }
- *
- * Returns: { "url": "...", "filename": "MOH711-DRAFT-...", "bytes": 54321 }
- *
- * Env vars: MOH711_REPORT_SECRET, BLOB_READ_WRITE_TOKEN (or blob_READ_WRITE_TOKEN)
+ * Returns: { url, filename, bytes }
  */
 
 const fs = require("fs");
@@ -88,6 +74,7 @@ module.exports = async (req, res) => {
       ancRevisit: num(body.ancRevisit),
       ancTotal: num(body.ancTotal),
       anc4thVisit: num(body.anc4thVisit),
+      anc8: num(body.anc8),
       iptp1: body.iptp1 || "0",
       iptp2: body.iptp2 || "0",
       iptp3: body.iptp3 || "0",
@@ -104,6 +91,7 @@ module.exports = async (req, res) => {
       ANC_REVISIT: t.ancRevisit,
       ANC_TOTAL: t.ancTotal,
       ANC_4TH_VISIT: t.anc4thVisit,
+      ANC_8TH_CONTACT: t.anc8,
       IPTP1: esc(t.iptp1),
       IPTP2: esc(t.iptp2),
       IPTP3: esc(t.iptp3),
