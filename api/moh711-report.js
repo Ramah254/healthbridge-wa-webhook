@@ -12,31 +12,21 @@
  * submitting anything to a government system. Same transport pattern as
  * odpc-report.js and mch-report.js (Make cannot carry raw PDF bytes).
  *
- * ---------------------------------------------------------------------------
  * Body:
  * {
  *   "secret": "<MOH711_REPORT_SECRET>",
  *   "facility": "Example Hospital",
  *   "month": "September 2026",
  *   "reportDate": "8 September 2026",
- *   "ancNew": 12,
- *   "ancRevisit": 34,
- *   "ancTotal": 46,
- *   "anc4thVisit": 9,
- *   "iptp1": "NOT TRACKED — add IPTpDose1Date to Mother_Profile to enable",
- *   "iptp2": "NOT TRACKED — add IPTpDose2Date to Mother_Profile to enable",
+ *   "ancNew": 12, "ancRevisit": 34, "ancTotal": 46, "anc4thVisit": 9,
+ *   "iptp1": "0", "iptp2": "0", "iptp3": "0",
  *   "totalDeliveries": 5,
  *   "format": "pdf" | "html"
  * }
  *
- * Returns (format "pdf"):
- * { "url": "...", "filename": "MOH711-DRAFT-Example-Hospital-September-2026.pdf", "bytes": 54321 }
+ * Returns: { "url": "...", "filename": "MOH711-DRAFT-...", "bytes": 54321 }
  *
- * Env vars required:
- *   MOH711_REPORT_SECRET   shared secret, must match what Make sends
- *   BLOB_READ_WRITE_TOKEN  (or blob_READ_WRITE_TOKEN) — same Blob store as mch-report
- *
- * Vercel project settings required: Node.js 22.x+ (same project as mch-report.js).
+ * Env vars: MOH711_REPORT_SECRET, BLOB_READ_WRITE_TOKEN (or blob_READ_WRITE_TOKEN)
  */
 
 const fs = require("fs");
@@ -65,7 +55,6 @@ function fillTemplate(tokens) {
 async function toPdf(html) {
   const { default: chromium } = await import("@sparticuz/chromium");
   const { default: puppeteer } = await import("puppeteer-core");
-
   const browser = await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
@@ -82,9 +71,7 @@ async function toPdf(html) {
 }
 
 module.exports = async (req, res) => {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "POST only" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
 
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
@@ -103,6 +90,7 @@ module.exports = async (req, res) => {
       anc4thVisit: num(body.anc4thVisit),
       iptp1: body.iptp1 || "0",
       iptp2: body.iptp2 || "0",
+      iptp3: body.iptp3 || "0",
       totalDeliveries: num(body.totalDeliveries),
     };
 
@@ -118,6 +106,7 @@ module.exports = async (req, res) => {
       ANC_4TH_VISIT: t.anc4thVisit,
       IPTP1: esc(t.iptp1),
       IPTP2: esc(t.iptp2),
+      IPTP3: esc(t.iptp3),
       IPTP_ROW_CLASS: iptpTracked ? "ok" : "warn",
       TOTAL_DELIVERIES: t.totalDeliveries,
     };
@@ -130,18 +119,12 @@ module.exports = async (req, res) => {
     }
 
     const pdf = await toPdf(html);
-
     const safeFacility = String(t.facility || "facility").replace(/\s+/g, "-");
     const safeMonth = String(t.month || "report").replace(/\s+/g, "-");
     const filename = `MOH711-DRAFT-${safeFacility}-${safeMonth}.pdf`;
 
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.blob_READ_WRITE_TOKEN;
-    if (!blobToken) {
-      throw new Error(
-        "No Blob token found in either BLOB_READ_WRITE_TOKEN or blob_READ_WRITE_TOKEN. " +
-        "Same store as mch-report.js (mchblob) — confirm it's linked to this project too."
-      );
-    }
+    if (!blobToken) throw new Error("No Blob token found.");
 
     const { put } = await import("@vercel/blob");
     const blob = await put(`moh711-reports/${filename}`, pdf, {
