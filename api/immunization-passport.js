@@ -1,75 +1,179 @@
 /**
  * POST /api/immunization-passport
  *
- * Renders a mother's Digital Immunization Passport (KEPI dose record) as a
- * PDF with an embedded QR code, uploads it to Vercel Blob, and returns a
- * plain JSON URL. Same transport pattern as odpc-report.js and mch-report.js.
+ * Digital Immunization Passport PDF — rewritten with pdfkit (pure JS).
+ * No Chromium: runs in <1 second on Vercel Hobby free-tier cold starts.
  *
- * Body: { secret, motherId, motherName, babyName, dob, facility, generatedOn,
- *         doses: [{label, status, date}], format? }
+ * Body: { secret, motherId, motherName, babyName, dob, facility,
+ *         generatedOn, doses:[{label,status,date}], format? }
  * Returns: { url, filename, bytes }
- *
- * Env vars: PASSPORT_REPORT_SECRET, BLOB_READ_WRITE_TOKEN (or blob_READ_WRITE_TOKEN)
  */
 
-const fs = require("fs");
-const path = require("path");
+"use strict";
 
-function esc(s) {
-  return String(s == null ? "" : s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+const PDFDocument = require("pdfkit");
+const QRCode      = require("qrcode");
 
-function buildDoseRows(doses) {
-  if (!Array.isArray(doses) || !doses.length) {
-    return `<tr><td colspan="3" style="color:#94A3B8;">No dose records available yet.</td></tr>`;
-  }
-  return doses
-    .map((d) => {
-      const given = String(d.status || "").toLowerCase() === "given";
-      const statusHtml = given
-        ? `<span class="status-given">Given</span>`
-        : `<span class="status-due">Due</span>`;
-      const dateHtml = given ? esc(d.date || "") : "—";
-      return `<tr>
-        <td>${esc(d.label || "")}</td>
-        <td class="num">${statusHtml}</td>
-        <td class="date">${dateHtml}</td>
-      </tr>`;
-    })
-    .join("\n");
-}
+function esc(v) { return String(v == null ? "" : v); }
 
-function fillTemplate(tokens) {
-  const tplPath = path.join(process.cwd(), "templates", "immunization-passport-template.html");
-  let html = fs.readFileSync(tplPath, "utf-8");
-  for (const [k, val] of Object.entries(tokens)) {
-    html = html.split(`{{${k}}}`).join(String(val));
-  }
-  const leftover = [...new Set((html.match(/\{\{[A-Z0-9_]+\}\}/g) || []))];
-  if (leftover.length) throw new Error(`Unfilled tokens: ${leftover.join(", ")}`);
-  return html;
-}
+async function buildPdf({ motherId, motherName, babyName, dob, facility, generatedOn, doses }) {
+  const verifyUrl =
+    "https://healthbridge-wa-webhook.vercel.app/api/verify" +
+    `?id=${encodeURIComponent(motherId)}` +
+    `&name=${encodeURIComponent(babyName)}` +
+    `&dob=${encodeURIComponent(dob)}` +
+    `&facility=${encodeURIComponent(facility)}` +
+    `&issued=${encodeURIComponent(generatedOn)}`;
 
-async function toPdf(html) {
-  const { default: chromium } = await import("@sparticuz/chromium");
-  const { default: puppeteer } = await import("puppeteer-core");
+  const qrBuf = await QRCode.toBuffer(verifyUrl, { type: "png", margin: 1, width: 150 });
 
-  const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      size: "A4",
+      margins: { top: 40, bottom: 40, left: 40, right: 40 },
+      info: {
+        Title:  `${babyName} – Immunization Passport`,
+        Author: "HealthBridge Solutions",
+      },
+    });
+
+    const chunks = [];
+    doc.on("data",  (c) => chunks.push(c));
+    doc.on("end",   ()  => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    const BRAND = "#1A56DB";
+    const DARK  = "#0F172A";
+    const SLATE = "#64748B";
+    const L = 40, R = 555, W = R - L;
+
+    // Masthead
+    doc.font("Helvetica-Bold").fontSize(14).fillColor(BRAND)
+       .text("HealthBridge Solutions", L, 40);
+    doc.font("Helvetica").fontSize(8).fillColor(SLATE)
+       .text("DIGITAL IMMUNIZATION PASSPORT", L, 40, { align: "right" });
+    doc.moveTo(L, 62).lineTo(R, 62).strokeColor(DARK).lineWidth(1.5).stroke();
+
+    // Title
+    doc.font("Helvetica-Bold").fontSize(19).fillColor(DARK)
+       .text(`${babyName}'s Immunization Record`, L, 70);
+
+    // ID card
+    const CARD_T = 100, CARD_H = 92, QRW = 78;
+    const QRL = R - QRW;
+
+    doc.rect(L, CARD_T, W, CARD_H).fillColor("#F7F9FC").fill();
+    doc.rect(L, CARD_T, W, CARD_H).strokeColor("#DCE6F8").lineWidth(0.5).stroke();
+    doc.rect(L, CARD_T, 3, CARD_H).fillColor(BRAND).fill();
+
+    const CX = L + 10;
+    const C2 = L + Math.round(W / 2) - 10;
+
+    function metaField(label, val, x, y) {
+      doc.font("Helvetica").fontSize(7).fillColor(SLATE).text(label, x, y, { width: 150 });
+      doc.font("Helvetica-Bold").fontSize(10).fillColor(DARK)
+         .text(val || "—", x, y + 9, { width: QRL - x - 8, lineBreak: false });
+    }
+
+    metaField("CHILD'S NAME",      babyName,    CX, CARD_T + 10);
+    metaField("DATE OF BIRTH",     dob,         C2, CARD_T + 10);
+    metaField("MOTHER / GUARDIAN", motherName,  CX, CARD_T + 36);
+    metaField("FACILITY",          facility,    C2, CARD_T + 36);
+    metaField("RECORD ID",         motherId,    CX, CARD_T + 62);
+    metaField("GENERATED",         generatedOn, C2, CARD_T + 62);
+
+    doc.image(qrBuf, QRL + 2, CARD_T + 6, { width: QRW - 6, height: QRW - 6 });
+    doc.font("Helvetica").fontSize(6).fillColor(SLATE)
+       .text("Scan to verify record", QRL + 2, CARD_T + CARD_H - 10,
+             { width: QRW - 6, align: "center" });
+
+    // Headline box
+    const hlText =
+      `This document is an official digital record of ${babyName}'s immunizations under ` +
+      `Kenya's KEPI schedule, generated directly from ${facility}'s HealthBridge follow-up system. ` +
+      `It may be presented for school or daycare enrollment in place of, or alongside, ` +
+      `the physical Mother & Child Health booklet.`;
+    const HL_T = CARD_T + CARD_H + 10;
+    const HL_H = doc.heightOfString(hlText, { width: W - 16 }) + 26;
+
+    doc.rect(L, HL_T, W, HL_H).fillColor("#EFF4FE").fill();
+    doc.rect(L, HL_T, 3, HL_H).fillColor(BRAND).fill();
+    doc.font("Helvetica-Bold").fontSize(7).fillColor(BRAND)
+       .text("FOR SCHOOLS AND DAYCARES", L + 10, HL_T + 8);
+    doc.font("Helvetica").fontSize(9).fillColor(DARK)
+       .text(hlText, L + 10, HL_T + 19, { width: W - 16 });
+
+    // Dose table
+    const SEC_T = HL_T + HL_H + 12;
+    doc.font("Helvetica-Bold").fontSize(7).fillColor(BRAND)
+       .text("IMMUNIZATION RECORD", L, SEC_T);
+    doc.font("Helvetica-Bold").fontSize(12).fillColor(DARK)
+       .text("KEPI schedule, birth through 18 months.", L, SEC_T + 10);
+
+    const TH_T = SEC_T + 28, TH_H = 18;
+    doc.rect(L, TH_T, W, TH_H).fillColor(DARK).fill();
+    doc.font("Helvetica-Bold").fontSize(7).fillColor("#FFFFFF");
+    doc.text("VACCINE / DOSE", L + 8,   TH_T + 5, { width: 285 });
+    doc.text("STATUS",         L + 298,  TH_T + 5, { width: 80,      align: "right" });
+    doc.text("DATE GIVEN",     L + 382,  TH_T + 5, { width: W - 387, align: "right" });
+
+    let rowY = TH_T + TH_H;
+    const RH = 16;
+    const doseRows = doses.length ? doses : [null];
+
+    doseRows.forEach((d, i) => {
+      const bg = i % 2 === 0 ? "#FFFFFF" : "#F8FAFB";
+      doc.rect(L, rowY, W, RH).fillColor(bg).fill();
+
+      if (!d) {
+        doc.font("Helvetica").fontSize(8).fillColor(SLATE)
+           .text("No dose records available yet.", L + 8, rowY + 4, { width: 400 });
+      } else {
+        const given = String(d.status || "").toLowerCase() === "given";
+        doc.font("Helvetica").fontSize(8).fillColor(DARK)
+           .text(esc(d.label), L + 8, rowY + 4, { width: 285, lineBreak: false });
+        doc.font("Helvetica-Bold").fontSize(8)
+           .fillColor(given ? "#158035" : "#C2410C")
+           .text(given ? "Given" : "Due", L + 298, rowY + 4,
+                 { width: 80, align: "right", lineBreak: false });
+        doc.font("Helvetica-Bold").fontSize(8).fillColor(DARK)
+           .text(given ? (esc(d.date) || "—") : "—", L + 382, rowY + 4,
+                 { width: W - 387, align: "right", lineBreak: false });
+      }
+      doc.moveTo(L, rowY + RH).lineTo(R, rowY + RH)
+         .strokeColor("#E8EEF7").lineWidth(0.4).stroke();
+      rowY += RH;
+    });
+
+    // Signoff
+    const SIG_T = rowY + 10;
+    doc.moveTo(L, SIG_T).lineTo(R, SIG_T).strokeColor("#E2E8F0").lineWidth(0.5).stroke();
+    doc.font("Helvetica").fontSize(8.8).fillColor(DARK)
+       .text(
+         `This record reflects doses logged through HealthBridge's WhatsApp-based follow-up ` +
+         `system as of the generation date above. Please confirm any recent doses directly ` +
+         `with ${facility} if this document is more than a few weeks old.`,
+         L, SIG_T + 8, { width: W }
+       );
+    doc.moveDown(0.4);
+    doc.font("Helvetica").fontSize(7.8).fillColor(SLATE)
+       .text("HealthBridge Solutions · Maternal & Child Health Follow-Up");
+    doc.moveDown(0.8);
+    doc.moveTo(L, doc.y).lineTo(R, doc.y).strokeColor("#E2E8F0").lineWidth(0.4).stroke();
+    doc.moveDown(0.3);
+    doc.font("Helvetica-Bold").fontSize(7).fillColor(SLATE)
+       .text("About this document.  ", { continued: true });
+    doc.font("Helvetica").fontSize(7).fillColor(SLATE)
+       .text(
+         `Doses are recorded when a caregiver confirms them via WhatsApp or a nurse updates ` +
+         `the record directly. This is a convenience record, not a replacement for the official ` +
+         `Ministry of Health Mother & Child Health booklet. ` +
+         `Confidential to ${motherName} and ${facility}.`,
+         { width: W }
+       );
+
+    doc.end();
   });
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    return await page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true });
-  } finally {
-    await browser.close();
-  }
 }
 
 module.exports = async (req, res) => {
@@ -80,72 +184,47 @@ module.exports = async (req, res) => {
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    if (!process.env.PASSPORT_REPORT_SECRET || body.secret !== process.env.PASSPORT_REPORT_SECRET) {
+    if (
+      !process.env.PASSPORT_REPORT_SECRET ||
+      body.secret !== process.env.PASSPORT_REPORT_SECRET
+    ) {
       return res.status(401).json({ error: "unauthorized" });
     }
 
-    const t = {
-      motherId: body.motherId || "",
-      motherName: body.motherName || "",
-      babyName: body.babyName || "Baby",
-      dob: body.dob || "",
-      facility: body.facility || "",
-      generatedOn: body.generatedOn || "",
-      doses: Array.isArray(body.doses) ? body.doses : [],
+    const data = {
+      motherId:    esc(body.motherId),
+      motherName:  esc(body.motherName),
+      babyName:    esc(body.babyName) || "Baby",
+      dob:         esc(body.dob),
+      facility:    esc(body.facility),
+      generatedOn: esc(body.generatedOn),
+      doses:       Array.isArray(body.doses) ? body.doses : [],
     };
 
-    const QRCode = require("qrcode");
-
-    // Verification URL — scanned by schools/daycares to confirm authenticity
-    const verifyUrl =
-      `https://healthbridge-wa-webhook.vercel.app/api/verify` +
-      `?id=${encodeURIComponent(t.motherId)}` +
-      `&name=${encodeURIComponent(t.babyName)}` +
-      `&dob=${encodeURIComponent(t.dob)}` +
-      `&facility=${encodeURIComponent(t.facility)}` +
-      `&issued=${encodeURIComponent(t.generatedOn)}`;
-
-    const qrDataUri = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 240 });
-
-    const tokens = {
-      BABY_NAME: esc(t.babyName),
-      DOB: esc(t.dob),
-      MOTHER_NAME: esc(t.motherName),
-      FACILITY: esc(t.facility),
-      MOTHER_ID: esc(t.motherId),
-      GENERATED_ON: esc(t.generatedOn),
-      QR_DATA_URI: qrDataUri,
-      DOSE_ROWS: buildDoseRows(t.doses),
-    };
-
-    const html = fillTemplate(tokens);
+    const pdf = await buildPdf(data);
 
     if (body.format === "html") {
-      res.setHeader("content-type", "text/html; charset=utf-8");
-      return res.status(200).send(html);
+      res.setHeader("content-type", "text/plain; charset=utf-8");
+      return res.status(200).send(`pdfkit OK — ${pdf.length} bytes`);
     }
 
-    const pdf = await toPdf(html);
-
-    // Deterministic filename keyed on motherId — enables /api/verify to locate the blob
-    const filename = `Immunization-Passport-${t.motherId}.pdf`;
-
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.blob_READ_WRITE_TOKEN;
+    const blobToken =
+      process.env.BLOB_READ_WRITE_TOKEN || process.env.blob_READ_WRITE_TOKEN;
     if (!blobToken) {
-      throw new Error(
-        "No Blob token found in either BLOB_READ_WRITE_TOKEN or blob_READ_WRITE_TOKEN."
-      );
+      throw new Error("No Blob token (BLOB_READ_WRITE_TOKEN / blob_READ_WRITE_TOKEN).");
     }
 
     const { put } = await import("@vercel/blob");
+    const filename = `Immunization-Passport-${data.motherId}.pdf`;
     const blob = await put(`immunization-passports/${filename}`, pdf, {
-      access: "public",
-      contentType: "application/pdf",
-      addRandomSuffix: false,   // deterministic URL — verify endpoint depends on this
-      token: blobToken,
+      access:          "public",
+      contentType:     "application/pdf",
+      addRandomSuffix: false,
+      token:           blobToken,
     });
 
     return res.status(200).json({ url: blob.url, filename, bytes: pdf.length });
+
   } catch (err) {
     console.error("immunization-passport failed:", err);
     return res.status(500).json({ error: String(err.message || err) });

@@ -5,6 +5,7 @@
     "@sparticuz/chromium": "149.0.0",
     "puppeteer-core": "^24.0.0",
     "@vercel/blob": "^0.27.0",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "pdfkit": "^0.15.0"
   }
 }
