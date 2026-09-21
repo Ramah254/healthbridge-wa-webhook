@@ -31,7 +31,7 @@ function normalizeDoses(raw) {
 }
 
 async function buildPdf(PDFDocument, QRCode, {
-  motherId, motherName, babyName, dob, facility, generatedOn, doses
+  motherId, motherName, babyName, dob, facility, generatedOn, doses, _debugRawDoses
 }) {
   const verifyUrl =
     "https://healthbridge-wa-webhook.vercel.app/api/verify" +
@@ -155,6 +155,10 @@ async function buildPdf(PDFDocument, QRCode, {
       if (!d) {
         doc.font("Helvetica").fontSize(9).fillColor(SLATE)
            .text("No dose records available yet.", L + 14, rowY + 9, { width: 420 });
+        if (_debugRawDoses) {
+          doc.font("Helvetica").fontSize(6).fillColor("#C2410C")
+             .text("[TEMP DEBUG] raw doses received: " + _debugRawDoses, L + 14, rowY + 18, { width: W - 28 });
+        }
       } else {
         const given = d.status.toLowerCase() === "given";
         doc.font("Helvetica").fontSize(9.5).fillColor(DARK)
@@ -239,6 +243,13 @@ module.exports = async (req, res) => {
       facility:    esc(body.facility),
       generatedOn: esc(body.generatedOn),
       doses:       normalizeDoses(body.doses),
+      _debugRawDoses: (function () {
+        try {
+          return typeof body.doses + ": " + JSON.stringify(body.doses).slice(0, 400);
+        } catch (e) {
+          return typeof body.doses + " (stringify failed: " + e.message + ")";
+        }
+      })(),
     };
 
     const pdf = await buildPdf(PDFDocument, QRCode, data);
