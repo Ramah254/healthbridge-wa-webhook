@@ -170,7 +170,7 @@ async function buildPdf(PDFDocument, QRCode, {
     doc.rect(L, TH_T, W, TH_H).fillColor(DARK).fill();
     doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#FFFFFF");
     doc.text("VACCINE / DOSE", L + 14, TH_T + 8, { width: 290, lineBreak: false });
-    doc.text("STATUS",         L + 300, TH_T + 8, { width: 90, align: "right", lineBreak: false });
+    doc.text("STATUS",         L + 300, TH_T + 8, { width: 90, align: "center", lineBreak: false });
     doc.text("DATE GIVEN",     L + 388, TH_T + 8, { width: W - 402, align: "right", lineBreak: false });
 
     let rowY = TH_T + TH_H;
@@ -190,12 +190,13 @@ async function buildPdf(PDFDocument, QRCode, {
            .text(d.label || "\u2014", L + 14, rowY + 8, { width: 285, lineBreak: false });
 
         if (given) {
-          doc.roundedRect(L + 300, rowY + 5, 76, 16, 8).fillColor(GIVEN_BG).fill();
+          const pillX = L + 300 + (90 - 76) / 2; // center the 76pt pill within the 90pt STATUS column
+          doc.roundedRect(pillX, rowY + 5, 76, 16, 8).fillColor(GIVEN_BG).fill();
           doc.font("Helvetica-Bold").fontSize(8).fillColor(GIVEN_TXT)
-             .text("Given", L + 300, rowY + 9, { width: 76, align: "center", lineBreak: false });
+             .text("Given", pillX, rowY + 9, { width: 76, align: "center", lineBreak: false });
         } else {
           doc.font("Helvetica-Bold").fontSize(8).fillColor(PEND_TXT)
-             .text("Not yet given", L + 300, rowY + 9, { width: 90, align: "right", lineBreak: false });
+             .text("Not yet given", L + 300, rowY + 9, { width: 90, align: "center", lineBreak: false });
         }
 
         doc.font("Helvetica-Bold").fontSize(9.5).fillColor(DARK)
