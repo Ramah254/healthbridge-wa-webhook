@@ -144,7 +144,12 @@ async function buildPdf(PDFDocument, QRCode, {
       `system. It may be presented for school or daycare enrollment in place of, or ` +
       `alongside, the physical Mother & Child Health booklet.`;
     const HL_T = CARD_T + CARD_H + 16;
-    const HL_H = doc.heightOfString(hlText, { font: "Helvetica", fontSize: 9.5, width: W - 28 }) + 34;
+    // Measure using the SAME active font/size/lineGap that will actually render the
+    // text below (heightOfString does not reliably honor a font/fontSize passed only
+    // via options) - otherwise the box is sized against the wrong font and the last
+    // line spills out below it.
+    doc.font("Helvetica").fontSize(9.5);
+    const HL_H = doc.heightOfString(hlText, { width: W - 28, lineGap: 2 }) + 40;
 
     doc.roundedRect(L, HL_T, W, HL_H, 3).fillColor(BRAND_SOFT).fill();
     doc.rect(L, HL_T, 4, HL_H).fillColor(BRAND).fill();
@@ -279,11 +284,19 @@ module.exports = async (req, res) => {
     }
 
     const { put } = await import("@vercel/blob");
+    // Display filename stays clean (what the recipient sees), but the STORAGE PATH gets
+    // a fresh timestamp every generation. WhatsApp's Cloud API fetches documents by the
+    // "link" URL we hand it (see module 408) and can reuse a prior fetch of an identical
+    // URL, so a static path risks silently resending an old version. A unique path per
+    // run guarantees a genuine re-fetch every time, regardless of any cache anywhere.
     const filename = `Immunization-Passport-${data.motherId}.pdf`;
-    const blob = await put(`immunization-passports/${filename}`, pdf, {
+    const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14); // YYYYMMDDHHmmss
+    const storagePath = `immunization-passports/${data.motherId}-${stamp}.pdf`;
+    const blob = await put(storagePath, pdf, {
       access:          "public",
       contentType:     "application/pdf",
       addRandomSuffix: false,
+      cacheControlMaxAge: 0,
       token:           blobToken,
     });
 
