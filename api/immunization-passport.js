@@ -19,6 +19,12 @@ function normalizeDoses(raw) {
   if (typeof arr === "string") {
     try { arr = JSON.parse(arr); } catch (e) { arr = []; }
   }
+  // Make's json:CreateJSON module always wraps its output under the field
+  // name from its Data Structure (confirmed via live trace: {"array":[...]});
+  // it cannot emit a bare array. Unwrap that specific, observed shape.
+  if (arr && typeof arr === "object" && !Array.isArray(arr) && Array.isArray(arr.array)) {
+    arr = arr.array;
+  }
   if (!Array.isArray(arr)) return [];
   return arr.map((d) => {
     const src = d && typeof d === "object" && d.properties ? d.properties : d;
