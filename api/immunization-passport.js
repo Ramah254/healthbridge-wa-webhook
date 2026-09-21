@@ -26,7 +26,7 @@ function normalizeDoses(raw) {
     arr = arr.array;
   }
   if (!Array.isArray(arr)) return [];
-  return arr.map((d) => {
+  const items = arr.map((d) => {
     const src = d && typeof d === "object" && d.properties ? d.properties : d;
     return {
       label:  src && src.label  != null ? String(src.label)  : "",
@@ -34,6 +34,24 @@ function normalizeDoses(raw) {
       date:   src && src.date   != null ? String(src.date)   : "",
     };
   });
+  // Make's aggregator does not guarantee it preserves the sheet's chronological
+  // order once passed through the Text Aggregator. Sort here, ourselves, so the
+  // schedule always displays birth -> 18 months regardless of arrival order.
+  const parseDMY = (s) => {
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(s || "").trim());
+    if (!m) return null;
+    const [, d, mo, y] = m;
+    return new Date(Number(y), Number(mo) - 1, Number(d)).getTime();
+  };
+  items.sort((a, b) => {
+    const ta = parseDMY(a.date);
+    const tb = parseDMY(b.date);
+    if (ta == null && tb == null) return 0;
+    if (ta == null) return 1;
+    if (tb == null) return -1;
+    return ta - tb;
+  });
+  return items;
 }
 
 async function buildPdf(PDFDocument, QRCode, {
