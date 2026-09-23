@@ -86,14 +86,14 @@ const SPEC = {
   ACTIVE_MOTHERS: ["ActiveMothers", "", false],
   NEW_ENROLLMENTS: ["NewEnrollments", "", false],
   MESSAGES_SENT: ["MessagesSent", "", false],
-  RESPONSE_RATE: ["ResponseRate", "%", false],
+  RESPONSE_RATE: ["ResponseRate", " pts", false],
   REMINDERS_SENT: ["RemindersSent", "", false],
-  ATTENDANCE_RATE: ["AttendanceRate", "%", false],
-  NOSHOW_RATE: ["NoShowRate", "%", true],
+  ATTENDANCE_RATE: ["AttendanceRate", " pts", false],
+  NOSHOW_RATE: ["NoShowRate", " pts", true],
   NOSHOWS_RECOVERED: ["NoShowsRecovered", "", false],
   IMMUNIZATION_REMINDERS: ["ImmunizationReminders", "", false],
   DELIVERIES_CONFIRMED: ["DeliveriesConfirmed", "", false],
-  FACILITY_SHARE: ["FacilityShare", "%", false],
+  FACILITY_SHARE: ["FacilityShare", " pts", false],
   FACILITY_DELIVERIES: ["FacilityDeliveries", "", false],
   ESCALATIONS: ["Escalations", "", false],
   DANGER_SIGNS: ["DangerSignAlerts", "", false],
@@ -116,8 +116,11 @@ function buildTokens(cur, prev) {
     const c = cur[key];
     const p = prev[key];
     const d = delta(c, p, unit, inverted);
-    v[token] = c.toLocaleString("en-KE");
-    v[`${token}_PREV`] = p.toLocaleString("en-KE");
+    // Response rate is stored to one decimal upstream; always show it that way
+    // (78.0, not 78) so both months read consistently.
+    const fmt = (x) => (key === "ResponseRate" ? x.toFixed(1) : x.toLocaleString("en-KE"));
+    v[token] = fmt(c);
+    v[`${token}_PREV`] = fmt(p);
     v[`${token}_DELTA`] = d.text;
     v[`${token}_CLASS`] = d.cls;
     v[`${token}_SHORT`] = short(c, p, unit);
