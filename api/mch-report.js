@@ -98,6 +98,9 @@ const SPEC = {
   ESCALATIONS: ["Escalations", "", false],
   DANGER_SIGNS: ["DangerSignAlerts", "", false],
   OPT_OUTS: ["OptOuts", "", true],
+  CES_SCORE: ["CES_AvgScore", "", false],
+  CES_RESPONSE: ["CesResponseRate", " pts", false],
+  CES_POOR: ["CES_Poor", "", true],
 };
 
 /** Adds the rates that Monthly_Metrics does not store directly. */
@@ -107,6 +110,11 @@ function derive(row) {
   r.AttendanceRate = pct(r.AttendanceConfirmed, r.RemindersSent);
   r.NoShowRate = pct(r.NoShows, r.RemindersSent);
   r.FacilityShare = pct(r.FacilityDeliveries, r.DeliveriesConfirmed);
+  r.CES_Sent = r.CES_Sent || 0;
+  r.CES_Replies = r.CES_Replies || 0;
+  r.CES_AvgScore = r.CES_AvgScore || 0;
+  r.CES_Poor = r.CES_Poor || 0;
+  r.CesResponseRate = pct(r.CES_Replies, r.CES_Sent);
   return r;
 }
 
@@ -118,7 +126,7 @@ function buildTokens(cur, prev) {
     const d = delta(c, p, unit, inverted);
     // Response rate is stored to one decimal upstream; always show it that way
     // (78.0, not 78) so both months read consistently.
-    const fmt = (x) => (key === "ResponseRate" ? x.toFixed(1) : x.toLocaleString("en-KE"));
+    const fmt = (x) => (key === "ResponseRate" || key === "CES_AvgScore" ? x.toFixed(1) : x.toLocaleString("en-KE"));
     v[token] = fmt(c);
     v[`${token}_PREV`] = fmt(p);
     v[`${token}_DELTA`] = d.text;
@@ -130,6 +138,15 @@ function buildTokens(cur, prev) {
   // rather than implying a verdict the number does not support.
   v.ESCALATIONS_CLASS = "flat";
   v.DANGER_SIGNS_CLASS = "flat";
+  // No replies means no score: show a dash rather than a misleading 0.0.
+  if (!cur.CES_Replies) v.CES_SCORE = "\u2013";
+  if (!prev.CES_Replies) v.CES_SCORE_PREV = "\u2013";
+  if (!cur.CES_Replies || !prev.CES_Replies) {
+    v.CES_SCORE_DELTA = "\u2013"; v.CES_SCORE_SHORT = "\u2013"; v.CES_SCORE_CLASS = "flat";
+  }
+  if (!cur.CES_Sent || !prev.CES_Sent) {
+    v.CES_RESPONSE_DELTA = "\u2013"; v.CES_RESPONSE_SHORT = "\u2013"; v.CES_RESPONSE_CLASS = "flat";
+  }
   v.REVENUE = cur.EstimatedRevenueKES.toLocaleString("en-KE");
   return v;
 }
@@ -143,6 +160,7 @@ const NARRATIVE_KEYS = [
   "NOSHOW_RATE_MEAN", "NOSHOWS_RECOVERED_MEAN", "IMMUNIZATION_REMINDERS_MEAN",
   "DELIVERIES_CONFIRMED_MEAN", "FACILITY_SHARE_MEAN", "ESCALATIONS_MEAN",
   "DANGER_SIGNS_MEAN", "OPT_OUTS_MEAN",
+  "CES_SCORE_MEAN", "CES_RESPONSE_MEAN", "CES_POOR_MEAN",
   "ACTION_1_TITLE", "ACTION_1_BODY",
   "ACTION_2_TITLE", "ACTION_2_BODY",
   "ACTION_3_TITLE", "ACTION_3_BODY",
@@ -170,6 +188,11 @@ Rules:
 - CHANGED_BODY must be 2 to 3 <p> paragraphs of raw HTML, no other tags.
 - Every *_MEAN is one or two sentences, max 22 words, no HTML.
 - Each ACTION_*_BODY is 2 to 4 sentences and must reference a specific number from the data.
+- CES_* fields are the post-visit experience survey. CES_AvgScore is out of 3 (1 Poor, 2 Okay,
+  3 Excellent), averaged over CES_Replies. CesResponseRate is CES_Replies as a percent of CES_Sent.
+  Every Poor rating (CES_Poor) is routed to a nurse for a follow-up call. If CES_Replies is 0, say
+  no feedback was collected. If CES_Replies is under 5, say the sample is too small to draw a
+  conclusion rather than interpreting the score.
 - SIGNOFF is a short personal close from Ramadhan to the director, 3 to 4 sentences.
 - Return ONLY a JSON object with exactly these keys, no preamble and no markdown fences:
 ${NARRATIVE_KEYS.join(", ")}`;
