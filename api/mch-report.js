@@ -221,7 +221,18 @@ Rules:
 ${NARRATIVE_KEYS.join(", ")}`;
 
 async function draftNarrative(meta, cur, prev) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  // Retry on overload (529) and 5xx so one busy moment does not fail the monthly run.
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, attempt * 4000));
+    res = await callAnthropic(meta, cur, prev);
+    if (res.ok || (res.status !== 529 && res.status < 500)) break;
+  }
+  return parseNarrative(res);
+}
+
+function callAnthropic(meta, cur, prev) {
+  return fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -242,7 +253,9 @@ async function draftNarrative(meta, cur, prev) {
       }],
     }),
   });
+}
 
+async function parseNarrative(res) {
   if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
