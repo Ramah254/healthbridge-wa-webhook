@@ -250,7 +250,7 @@
     <span class="kpi-prev">Last month: {{RESPONSE_RATE_PREV}}%</span>
   </div>
   <div class="kpi">
-    <span class="kpi-label">Attendance confirmed</span>
+    <span class="kpi-label">Attendance rate</span>
     <div class="kpi-value">{{ATTENDANCE_RATE}}%</div>
     <span class="kpi-delta {{ATTENDANCE_RATE_CLASS}}">{{ATTENDANCE_RATE_DELTA}}</span>
     <span class="kpi-prev">Last month: {{ATTENDANCE_RATE_PREV}}%</span>
@@ -334,13 +334,13 @@
         <td class="m-mean">{{REMINDERS_SENT_MEAN}}</td>
       </tr>
       <tr>
-        <td><span class="m-name">Attendance rate</span><span class="m-desc">Reminders that led to a confirmed visit</span></td>
+        <td><span class="m-name">Attendance rate</span><span class="m-desc">Share of due visits with a recorded outcome that were attended</span></td>
         <td class="num">{{ATTENDANCE_RATE}}%</td><td class="num">{{ATTENDANCE_RATE_PREV}}%</td>
         <td class="chg {{ATTENDANCE_RATE_CLASS}}">{{ATTENDANCE_RATE_DELTA}}</td>
         <td class="m-mean">{{ATTENDANCE_RATE_MEAN}}</td>
       </tr>
       <tr>
-        <td><span class="m-name">No-show rate</span><span class="m-desc">Reminders with no attendance recorded</span></td>
+        <td><span class="m-name">No-show rate</span><span class="m-desc">Share of due visits with a recorded outcome that were missed</span></td>
         <td class="num">{{NOSHOW_RATE}}%</td><td class="num">{{NOSHOW_RATE_PREV}}%</td>
         <td class="chg {{NOSHOW_RATE_CLASS}}">{{NOSHOW_RATE_DELTA}}</td>
         <td class="m-mean">{{NOSHOW_RATE_MEAN}}</td>
@@ -478,8 +478,8 @@
 
 <div class="method">
   <strong>How these numbers are produced.</strong> Every figure is counted directly from the follow-up
-  system's own records for {{REPORT_MONTH}} — no estimates and no manual entry. Attendance and no-show
-  figures are based on visit reminders issued in the period and the responses recorded against them.
+  system's own records for {{REPORT_MONTH}}, with no estimates and no manual entry. Attendance and no-show
+  rates cover visits due in the period that have a recorded outcome (attended or missed); visits still awaiting an outcome are excluded.
   Revenue is an estimate only, calculated from confirmed visits and facility deliveries using the
   standard fees agreed with your facility; it is not a billing statement. This report is confidential
   to {{FACILITY}}. Generated {{GENERATED_ON}}.
