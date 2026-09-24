@@ -11,6 +11,18 @@
 
 function esc(v) { return String(v == null ? "" : v); }
 
+/** HMAC signature for the QR verify link. /api/verify recomputes it, so a
+ *  record verifies only if every field is exactly as issued. No PDF lookup
+ *  and no public document link are needed to verify. */
+function passportSig(id, name, dob, facility, issued) {
+  const crypto = require("crypto");
+  return crypto
+    .createHmac("sha256", process.env.PASSPORT_REPORT_SECRET || "")
+    .update([id, name, dob, facility, issued].map(v => String(v || "")).join("|"))
+    .digest("hex")
+    .slice(0, 32);
+}
+
 /** Make sometimes delivers `doses` as a JSON-encoded string (raw-body
  *  auto-stringification) instead of a real array. Normalize both shapes,
  *  and unwrap the Aggregator's `{properties:{...}}` bundle if present. */
@@ -63,7 +75,8 @@ async function buildPdf(PDFDocument, QRCode, {
     `&name=${encodeURIComponent(babyName)}` +
     `&dob=${encodeURIComponent(dob)}` +
     `&facility=${encodeURIComponent(facility)}` +
-    `&issued=${encodeURIComponent(generatedOn)}`;
+    `&issued=${encodeURIComponent(generatedOn)}` +
+    `&sig=${passportSig(motherId, babyName, dob, facility, generatedOn)}`;
 
   const qrBuf = await QRCode.toBuffer(verifyUrl, { type: "png", margin: 1, width: 180 });
 
@@ -291,15 +304,36 @@ module.exports = async (req, res) => {
     // URL, so a static path risks silently resending an old version. A unique path per
     // run guarantees a genuine re-fetch every time, regardless of any cache anywhere.
     const filename = `Immunization-Passport-${data.motherId}.pdf`;
-    const stamp = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14); // YYYYMMDDHHmmss
-    const storagePath = `immunization-passports/${data.motherId}-${stamp}.pdf`;
+    // Storage path is an unguessable random token: no MotherID, no timestamp.
+    // The PDF holds a child's health record, so the URL must not be derivable.
+    const crypto = require("crypto");
+    const storagePath = `immunization-passports/${crypto.randomBytes(24).toString("hex")}.pdf`;
+    const { list, del } = await import("@vercel/blob");
     const blob = await put(storagePath, pdf, {
       access:          "public",
       contentType:     "application/pdf",
-      addRandomSuffix: false,
+      addRandomSuffix: true,
       cacheControlMaxAge: 0,
       token:           blobToken,
     });
+
+    // Retention: WhatsApp fetches the document within seconds of sending, so no
+    // passport PDF is kept longer than 24 hours. The family keeps the copy
+    // delivered on WhatsApp; the record can be regenerated from the sheet.
+    try {
+      const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+      let cursor;
+      do {
+        const page = await list({ prefix: "immunization-passports/", cursor, token: blobToken });
+        const stale = page.blobs
+          .filter(b => new Date(b.uploadedAt).getTime() < cutoff)
+          .map(b => b.url);
+        if (stale.length) await del(stale, { token: blobToken });
+        cursor = page.hasMore ? page.cursor : undefined;
+      } while (cursor);
+    } catch (e) {
+      console.error("passport cleanup failed (non-fatal):", e.message || e);
+    }
 
     return res.status(200).json({ url: blob.url, filename, bytes: pdf.length, doses: data.doses.length });
 
