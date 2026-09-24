@@ -107,8 +107,14 @@ const SPEC = {
 function derive(row) {
   const r = {};
   for (const k of Object.keys(row)) r[k] = num(row[k]);
-  r.AttendanceRate = pct(r.AttendanceConfirmed, r.RemindersSent);
-  r.NoShowRate = pct(r.NoShows, r.RemindersSent);
+  // Rates are over due visits with a recorded outcome (attended or missed).
+  // Using RemindersSent as the denominator counted visits not yet due, so
+  // attendance and no-show both looked tiny and did not add up.
+  const attended = row.VisitsAttended_Recount !== undefined ? r.VisitsAttended_Recount : r.AttendanceConfirmed;
+  r.VisitsWithOutcome = attended + r.NoShows;
+  r.AttendanceRate = pct(attended, r.VisitsWithOutcome);
+  r.NoShowRate = pct(r.NoShows, r.VisitsWithOutcome);
+  r.AwaitingOutcome = Math.max(0, r.RemindersSent - r.VisitsWithOutcome);
   r.FacilityShare = pct(r.FacilityDeliveries, r.DeliveriesConfirmed);
   r.CES_Sent = r.CES_Sent || 0;
   r.CES_Replies = r.CES_Replies || 0;
@@ -193,7 +199,24 @@ Rules:
   Every Poor rating (CES_Poor) is routed to a nurse for a follow-up call. If CES_Replies is 0, say
   no feedback was collected. If CES_Replies is under 5, say the sample is too small to draw a
   conclusion rather than interpreting the score.
-- SIGNOFF is a short personal close from Ramadhan to the director, 3 to 4 sentences.
+- SIGNOFF is a short personal close from Ramadhan to the director, 3 to 4 sentences. Address the
+  reader exactly as given in "Prepared for". If that is a role (e.g. "Medical Director") and not a
+  personal name, open with "Dear Medical Director," style wording. Never write "Dr." with a role,
+  and never invent a name.
+- Scope of counts: ActiveMothers is the caseload at month end. Escalations, DangerSignAlerts,
+  OptOuts, MessagesSent and DeliveriesConfirmed are events across ALL mothers the programme
+  handled during the month, including those who completed, delivered or left. Never divide them by
+  ActiveMothers or describe them as coming from the active caseload.
+- DeliveriesConfirmed counts mothers whose delivery date fell in the month. FacilityShare is
+  FacilityDeliveries as a percent of DeliveriesConfirmed.
+- AttendanceRate and NoShowRate are percentages of VisitsWithOutcome (due visits marked attended
+  or missed). AwaitingOutcome is reminders whose visit has no outcome yet; do not treat them as
+  missed. If VisitsWithOutcome is under 5, say the sample is too small to judge a trend.
+- EstimatedRevenueKES = attended ANC visits x 800 + attended PNC checks x 600 + attended vaccine
+  visits x 300 + FacilityDeliveries x 25,000. Only these drive revenue. Never attribute revenue to
+  DeliveriesConfirmed, enrollments or messages.
+- When most figures are single digits, say the numbers are too small to support firm conclusions
+  and avoid words like "collapsed", "surged" or "nearly doubled".
 - Return ONLY a JSON object with exactly these keys, no preamble and no markdown fences:
 ${NARRATIVE_KEYS.join(", ")}`;
 
