@@ -9,6 +9,8 @@
 
 "use strict";
 
+const { secretOk } = require("../lib/auth");
+
 function esc(v) { return String(v == null ? "" : v); }
 
 /** HMAC signature for the QR verify link. /api/verify recomputes it, so a
@@ -263,10 +265,7 @@ module.exports = async (req, res) => {
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    if (
-      !process.env.PASSPORT_REPORT_SECRET ||
-      body.secret !== process.env.PASSPORT_REPORT_SECRET
-    ) {
+    if (!secretOk(req, body, process.env.PASSPORT_REPORT_SECRET)) {
       return res.status(401).json({ error: "unauthorized" });
     }
 
