@@ -129,6 +129,8 @@ async function toPdf(html) {
   }
 }
 
+const { secretOk } = require("../lib/auth");
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "POST only" });
@@ -137,7 +139,7 @@ module.exports = async (req, res) => {
   try {
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 
-    if (!process.env.ODPC_REPORT_SECRET || body.secret !== process.env.ODPC_REPORT_SECRET) {
+    if (!secretOk(req, body, process.env.ODPC_REPORT_SECRET)) {
       return res.status(401).json({ error: "unauthorized" });
     }
 
@@ -215,6 +217,10 @@ module.exports = async (req, res) => {
       addRandomSuffix: true,
       token: blobToken,
     });
+
+    // Retention: Make.com fetches the PDF within seconds. Remove anything older than 24 hours.
+    const { purgeOld } = require("../lib/blob-purge");
+    await purgeOld("odpc-reports/", blobToken);
 
     return res.status(200).json({ url: blob.url, filename, bytes: pdf.length });
   } catch (err) {
